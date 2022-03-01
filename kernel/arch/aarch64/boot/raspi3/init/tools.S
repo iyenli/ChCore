@@ -57,7 +57,7 @@
 
 BEGIN_FUNC(arm64_elX_to_el1)
 	/* LAB 1 TODO 1 BEGIN */
-
+    mrs x9, CurrentEL
 	/* LAB 1 TODO 1 END */
 
 	// Check the current exception level.
@@ -75,7 +75,11 @@ BEGIN_FUNC(arm64_elX_to_el1)
 
 	// Set the return address and exception level.
 	/* LAB 1 TODO 2 BEGIN */
-
+    mov x11, SPSR_ELX_DAIF | SPSR_ELX_EL1H
+    msr spsr_el3, x11
+    adr x11, .Ltarget
+    msr elr_el3, x11
+    eret
 	/* LAB 1 TODO 2 END */
 
 .Lin_el2:
