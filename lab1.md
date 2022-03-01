@@ -24,7 +24,7 @@
 	# >>>>  0xc
 ```
 
-根据文档，1100对应EL3级别，实现正确。
+根据文档，0b1100对应EL3级别，实现正确。
 
 ## 3
 
@@ -76,4 +76,21 @@ ICS中讲到，初始化为0的全局变量会被存入.bss section. 如果有�
     # SET Bit of MMU to 0b1
 ```
 
-continue后，
+continue后，输出了：
+
+```
+boot: init_c
+[BOOT] Install boot page table
+[BOOT] Enable el1 MMU
+[BOOT] Jump to kernel main
+```
+
+然后程序无输出。终止GDB执行，发现程序运行在0x200的位置上，测试通过。
+
+## Ref
+
+https://developer.arm.com/documentation/
+
+https://users.ece.utexas.edu/~adnan/gdb-refcard.pdf
+
+https://modexp.wordpress.com/2018/10/30/arm64-assembly/
