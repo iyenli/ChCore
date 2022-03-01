@@ -43,6 +43,8 @@
     adr x11, .Ltarget
     # 将x11 放入elr_re3 
     msr elr_el3, x11
+    # barrier
+    isb
     eret
     # 执行流回到start函数，符合预计结果
 ```
@@ -55,7 +57,7 @@
 
 ## 5
 
-ICS中讲到，初始化为0的全局变量会被存入.bss section. 如果有这样的变量但是在加载时没有zero .bss, 那么程序可能出现意料之外的错误。
+ICS中讲到，初始化为0的全局变量会被存入.bss section. 如果有这样的变量但是在加载时没有zero .bss, 那么程序可能出现意料之外的错误。此外，如果程序员默认全局变量不初始化会被初始化为0，程序也可能出现错误。
 
 ## 6
 
@@ -69,3 +71,9 @@ ICS中讲到，初始化为0的全局变量会被存入.bss section. 如果有�
 
 ## 7
 
+```assembly
+    orr     x8, x8, #SCTLR_EL1_M
+    # SET Bit of MMU to 0b1
+```
+
+continue后，
