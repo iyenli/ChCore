@@ -1,0 +1,22 @@
+/home/lee/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/213.6777.58/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/lee/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/213.6777.58/bin/ninja/linux/ninja -G Ninja /home/lee/OS/chcore-lab
+-- The C compiler identification is GNU 9.3.0
+-- The CXX compiler identification is GNU 9.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+CMake Error at CMakeLists.txt:26 (message):
+  Do not run CMake command directly, use `./chbuild` instead
+Call Stack (most recent call first):
+  config.cmake:1 (chcore_config)
+  CMakeLists.txt:33 (include)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/lee/OS/chcore-lab/cmake-build-debug/CMakeFiles/CMakeOutput.log".
