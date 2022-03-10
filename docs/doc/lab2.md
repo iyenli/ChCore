@@ -21,11 +21,22 @@
 
 <img src="https://s2.loli.net/2022/03/10/hCaizoIePD2jLyW.png" alt="2022-03-10 09-13-43 的屏幕截图" style="zoom:80%;" />
 
+`info registers`可以看到PC, SP都在低地址空间，这是不可避免的，因为函数必须恢复特殊寄存器才能返回，而同一个函数的SP, PC都只能是一套。MMU_ACTIVATE之前使用的是物理地址，之后也是。
+
+<img src="https://s2.loli.net/2022/03/10/BxkMf8iaOP23n7q.png" alt="2022-03-10 09-31-38 的屏幕截图" style="zoom:67%;" />
+
 ## 4
 
+实现的时候注意维持的不变量包括：
 
+- Mem Area内的所有`page meta` 应该和这块内存的`Head Page meta `一样
+- 在`free list`中的Head Page `allocated == 0`
+- `free_list`中的节点数量应该等于`nr_free`
+- `merge/split `的输入应该在`free list`中, 输出应该仍然在`free list`中 (保证作为工具函数的正确性)
 
+主要的Bug就是`buddy_get_pages`中在调用了`spilt page`的时候，`pool->free_lists[page->order].nr_free--;`写为了`pool->free_lists[i].nr_free--;`。即改为了最初分配的大块的内存对应的`nr_free`. 这违反了第三条不变量。最终运行结果：
 
+<img src="/home/lee/图片/2022-03-10 20-11-43 的屏幕截图.png" alt="2022-03-10 20-11-43 的屏幕截图" style="zoom:67%;" />
 
 ## 5
 

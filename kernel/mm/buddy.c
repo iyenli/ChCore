@@ -105,6 +105,7 @@ static struct page *split_page(struct phys_mem_pool *pool, u64 order,
 
         list_del(&(page->node));
         pool->free_lists[page->order].nr_free--;
+        BUG_ON((long long)pool->free_lists[page->order].nr_free < 0);
 
         // split and decrease order
         for (int i = 0; i < split_size; ++i) {
@@ -115,6 +116,7 @@ static struct page *split_page(struct phys_mem_pool *pool, u64 order,
         list_add(&(another_page->node),
                  &(pool->free_lists[another_page->order].free_list));
         list_add(&(page->node), &(pool->free_lists[page->order].free_list));
+        BUG_ON(another_page->order != page->order);
         pool->free_lists[another_page->order].nr_free += 2;
 
         return split_page(pool, order, page);
@@ -150,10 +152,11 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
                                 }
 
                                 list_del(&(page->node));
-                                pool->free_lists[i].nr_free--;
+                                pool->free_lists[page->order].nr_free--;
                                 break;
                         } else {
-                                BUG("Unreachable here\n");
+                                BUG("Unreachable here, num = %d\n",
+                                    pool->free_lists[i].nr_free);
                         }
                 }
         }
@@ -184,8 +187,10 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
         // buddy is free  delete from list
         list_del(&(page->node));
         list_del(&(buddy->node));
+        BUG_ON(page->order != buddy->order);
         // delete two buddy chunks
         pool->free_lists[page->order].nr_free -= 2;
+        BUG_ON((long long)pool->free_lists[page->order].nr_free < 0);
 
         int page_size = (0x1 << (page->order));
         // set order + 1
@@ -294,10 +299,11 @@ u64 get_free_mem_size_from_buddy(struct phys_mem_pool *pool)
                 total_size += list->nr_free * current_order_size;
 
                 /* debug : print info about current order */
-                kdebug("buddy memory chunk order: %d, size: 0x%lx, num: %d\n",
-                       order,
-                       current_order_size,
-                       list->nr_free);
+                // kdebug("buddy memory chunk order: %d, size: 0x%lx, num:
+                // %d\n",
+                //        order,
+                //        current_order_size,
+                //        list->nr_free);
         }
         return total_size;
 }
