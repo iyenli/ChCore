@@ -10,6 +10,7 @@ extern void parse_mem_map(void);
 /* On raspi3, the size of physical memory pool only need to be 1 */
 #define PHYS_MEM_POOL_SIZE 1
 struct phys_mem_pool global_mem[PHYS_MEM_POOL_SIZE];
+/* always 1 in our impl */
 int physmem_map_num;
 u64 physmem_map[PHYS_MEM_POOL_SIZE][2]; /* [start, end) */
 
@@ -25,6 +26,7 @@ void mm_init(void)
 {
         vaddr_t free_mem_start = 0;
         vaddr_t free_mem_end = 0;
+
         struct page *page_meta_start = NULL;
         u64 npages = 0;
         u64 start_vaddr = 0;

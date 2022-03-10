@@ -79,8 +79,6 @@ BEGIN_FUNC(arm64_elX_to_el1)
     msr spsr_el3, x11
     adr x11, .Ltarget
     msr elr_el3, x11
-    isb
-    eret
 	/* LAB 1 TODO 2 END */
 
 .Lin_el2:
