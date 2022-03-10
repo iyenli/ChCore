@@ -41,6 +41,7 @@ void init_buddy(struct phys_mem_pool *pool, struct page *start_page,
                 page->pool = pool; // reverse ptr
         }
 
+        kdebug("Ready to call function buddy_free_pages");
         /* Put each physical memory page into the free lists. */
         for (page_idx = 0; page_idx < page_num; ++page_idx) {
                 page = start_page + page_idx;
@@ -129,7 +130,7 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
          */
         struct page *page = NULL;
         for (u64 i = order; i < BUDDY_MAX_ORDER; ++i) {
-                if (pool->free_lists[i].nr_free != 0) {
+                if (pool->free_lists[i].nr_free > 0) {
                         if (!list_empty(&(pool->free_lists[i].free_list))) {
                                 page = split_page(
                                         pool,
@@ -139,10 +140,20 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
                                         (struct page *)(pool->free_lists[i]
                                                                 .free_list
                                                                 .next));
+
+                                int page_size = (1 << page->order);
+                                for (int i = 0; i < page_size; ++i) {
+                                        if ((page + i)->allocated) {
+                                                BUG("Allocated bit still error");
+                                        }
+                                        (page + i)->allocated = 1;
+                                }
+
                                 list_del(&(page->node));
                                 pool->free_lists[i].nr_free--;
+                                break;
                         } else {
-                                BUG("Unreachables here\n");
+                                BUG("Unreachable here\n");
                         }
                 }
         }
@@ -165,7 +176,8 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
         // should be in free list
         // 3. recrusively call, until buddy is busy now
         struct page *buddy = get_buddy_chunk(pool, page);
-        if (buddy->allocated || page->order == (BUDDY_MAX_ORDER - 1)) {
+        if (!buddy || buddy->allocated
+            || page->order == (BUDDY_MAX_ORDER - 1)) {
                 return page;
         }
 
@@ -178,6 +190,11 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
         int page_size = (0x1 << (page->order));
         // set order + 1
         for (int i = 0; i < page_size; ++i) {
+                if ((page + i)->order != (buddy + i)->order) {
+                        BUG("page order: %d, buddy order: %d",
+                            (page + i)->order,
+                            (buddy + i)->order);
+                }
                 (page + i)->order++;
                 (buddy + i)->order++;
         }
@@ -203,20 +220,26 @@ void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
          * a suitable free list.
          */
         // first, set allocate = 0.
-        int page_size = (0x1 << (page->order));
-        for (int i = 0; i < page_size; ++i) {
-                (page + i)->allocated = 0;
-        }
+        if (page->allocated) {
+                int page_size = (0x1 << (page->order));
+                for (int i = 0; i < page_size; ++i) {
+                        if (!(page + i)->allocated) {
+                                BUG("Allocated bit still error");
+                        }
+                        (page + i)->allocated = 0;
+                }
 
-        // add sum of free from zero
-        pool->free_lists[page->order].nr_free++;
-        list_add(&(page->node), &(pool->free_lists[page->order].free_list));
+                // add sum of free from zero
+                pool->free_lists[page->order].nr_free++;
+                list_add(&(page->node),
+                         &(pool->free_lists[page->order].free_list));
 
-        // Invariant: in 1 << order area, allocate info is same to
-        // header->allocate!
-        struct page *buddy = get_buddy_chunk(pool, page);
-        if (!buddy->allocated) {
-                page = merge_page(pool, page);
+                // Invariant: in 1 << order area, allocate info is same to
+                // header->allocate!
+                struct page *buddy = get_buddy_chunk(pool, page);
+                if (buddy && !buddy->allocated) {
+                        page = merge_page(pool, page);
+                }
         }
 
         /* LAB 2 TODO 2 END */
