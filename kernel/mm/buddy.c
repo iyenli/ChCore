@@ -117,6 +117,7 @@ static struct page *split_page(struct phys_mem_pool *pool, u64 order,
                  &(pool->free_lists[another_page->order].free_list));
         list_add(&(page->node), &(pool->free_lists[page->order].free_list));
         BUG_ON(another_page->order != page->order);
+        BUG_ON(get_buddy_chunk(pool, page) != another_page);
         pool->free_lists[another_page->order].nr_free += 2;
 
         return split_page(pool, order, page);
@@ -187,10 +188,14 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
         // buddy is free  delete from list
         list_del(&(page->node));
         list_del(&(buddy->node));
-        BUG_ON(page->order != buddy->order);
+        if (page->order != buddy->order) {
+                BUG("page order: %d, buddy order: %d",
+                    page->order,
+                    buddy->order);
+        }
         // delete two buddy chunks
         pool->free_lists[page->order].nr_free -= 2;
-        BUG_ON((long long)pool->free_lists[page->order].nr_free < 0);
+        BUG_ON((s64)pool->free_lists[page->order].nr_free < 0);
 
         int page_size = (0x1 << (page->order));
         // set order + 1

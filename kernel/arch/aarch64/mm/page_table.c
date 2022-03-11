@@ -195,9 +195,6 @@ void free_page_table(void *pgtbl)
         free_pages(l0_ptp);
 }
 
-// SET_PTE_FLAG
-// GET_LX_INDEX
-// GET_NEXT_PTP
 /*
  * Translate a va to pa, and get its pte for the flags
  */
@@ -210,21 +207,22 @@ int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
          * `-ENOMAPPING` if the va is not mapped.
          */
         int flag = 0x0;
-        vaddr_t pte_va;
-        ptp_t *next_ptp = NULL;
+        ptp_t *next_ptp = pgtbl;
         pte_t *next_pte = NULL;
 
-        flag = get_next_ptp(pgtbl, 0, va, &next_ptp, &next_pte, false);
+        flag = get_next_ptp(next_ptp, 0, va, &next_ptp, &next_pte, false);
         if (flag != NORMAL_PTP) { // flag = -ENOMAPPING
+                kdebug("Return Error when query L0\n");
                 return -ENOMAPPING;
         }
 
         flag = get_next_ptp(next_ptp, 1, va, &next_ptp, &next_pte, false);
         if (flag < 0) {
+                kdebug("Return Error when query L1\n");
                 return flag;
         }
+        // support huge page
         if (flag == BLOCK_PTP) {
-                // normal ptp
                 *pa = (next_pte->l1_block.pfn << L1_INDEX_SHIFT)
                       | GET_VA_OFFSET_L1(va);
                 *entry = next_pte;
@@ -234,6 +232,7 @@ int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
         BUG_ON(flag != NORMAL_PTP);
         flag = get_next_ptp(next_ptp, 2, va, &next_ptp, &next_pte, false);
         if (flag < 0) {
+                kdebug("Return Error when query L2\n");
                 return flag;
         }
         if (flag == BLOCK_PTP) {
@@ -242,23 +241,17 @@ int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
                 *entry = next_pte;
                 return NORMAL_MEMORY;
         }
-        BUG_ON(flag != NORMAL_PTP);
 
+        BUG_ON(flag != NORMAL_PTP);
         flag = get_next_ptp(next_ptp, 3, va, &next_ptp, &next_pte, false);
         if (flag < 0) {
+                kdebug("Return Error when query L3\n");
                 return flag;
         }
-        if (flag == BLOCK_PTP) {
-                // normal ptp
-                *pa = (next_pte->l3_page.pfn << L3_INDEX_SHIFT)
-                      | GET_VA_OFFSET_L3(va);
-                *entry = next_pte;
-                return NORMAL_MEMORY;
-        }
-
-        BUG("Control flow never reaches here.");
-        return -ENOMAPPING;
-
+        *pa = ((next_pte->l3_page.pfn << L3_INDEX_SHIFT)
+               | GET_VA_OFFSET_L3(va));
+        *entry = next_pte;
+        return NORMAL_MEMORY;
         /* LAB 2 TODO 3 END */
 }
 
@@ -288,12 +281,15 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                                 next_ptp, 0, va, &next_ptp, &next_pte, true);
 
                         if (flag < 0) {
+                                kdebug("Return Error when map 1G page\n");
                                 return flag;
                         }
-                        next_pte->l1_block.pfn = ((pa)&L1_BLOCK_MASK);
+
+                        next_pte = &(next_ptp->ent[GET_L1_INDEX(va)]);
+                        next_pte->pte = 0;
+                        next_pte->l1_block.pfn = ((pa) >> L1_INDEX_SHIFT);
                         next_pte->l1_block.is_table = 0;
                         next_pte->l1_block.is_valid = 1;
-                        next_pte->pte = 0;
                         set_pte_flags(next_pte, flags, USER_PTE);
                 }
         } else if (len >= SIZE_2M) {
@@ -306,35 +302,7 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
 
                         // if first time, we will alloc it
                         // again, else just return
-                        flag = get_next_ptp(
-                                next_ptp, 0, va, &next_ptp, &next_pte, true);
-
-                        if (flag < 0) {
-                                return flag;
-                        }
-                        flag = get_next_ptp(
-                                next_ptp, 1, va, &next_ptp, &next_pte, true);
-
-                        if (flag < 0) {
-                                return flag;
-                        }
-                        next_pte->l2_block.pfn = ((pa)&L2_BLOCK_MASK);
-                        next_pte->l2_block.is_table = 0;
-                        next_pte->l2_block.is_valid = 1;
-                        next_pte->pte = 0;
-                        set_pte_flags(next_pte, flags, USER_PTE);
-                }
-        } else if (len >= SIZE_4K) {
-                len = ROUND_UP(len, SIZE_4K);
-
-                for (size_t i = 0; i < len;
-                     i += SIZE_4K, va += SIZE_4K, pa += SIZE_4K) {
-                        ptp_t *next_ptp = pgtbl;
-                        pte_t *next_pte = NULL;
-
-                        // if first time, we will alloc it
-                        // again, else just return
-                        for (int k = 0; k < 3; ++k) {
+                        for (int k = 0; k < 2; ++k) {
                                 flag = get_next_ptp(next_ptp,
                                                     k,
                                                     va,
@@ -343,14 +311,49 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                                                     true);
 
                                 if (flag < 0) {
+                                        kdebug("Return Error when map 4K page\n");
                                         return flag;
                                 }
                         }
 
-                        next_pte->l3_page.pfn = ((pa)&L3_PAGE_MASK);
-                        next_pte->l3_page.is_page = 1;
-                        next_pte->l2_block.is_valid = 1;
+                        next_pte = &(next_ptp->ent[GET_L2_INDEX(va)]);
                         next_pte->pte = 0;
+                        next_pte->l2_block.pfn = ((pa) >> L2_INDEX_SHIFT);
+                        next_pte->l2_block.is_table = 0;
+                        next_pte->l2_block.is_valid = 1;
+                        set_pte_flags(next_pte, flags, USER_PTE);
+                }
+        } else {
+                len = ROUND_UP(len, SIZE_4K);
+                kdebug("Allocate 4K: %d\n", len);
+
+                for (size_t i = 0; i < len;
+                     i += SIZE_4K, va += SIZE_4K, pa += SIZE_4K) {
+                        ptp_t *next_ptp = pgtbl;
+                        pte_t *next_pte = NULL;
+
+                        // if first time, we will alloc it
+                        // again, else just return
+                        for (int k = 0; k <= 2; ++k) {
+                                flag = get_next_ptp(next_ptp,
+                                                    k,
+                                                    va,
+                                                    &next_ptp,
+                                                    &next_pte,
+                                                    true);
+
+                                if (flag < 0) {
+                                        kdebug("Return Error when map 4K page\n");
+                                        return flag;
+                                }
+                        }
+
+                        next_pte = &(next_ptp->ent[GET_L3_INDEX(va)]);
+                        next_pte->pte = 0; // memset
+
+                        next_pte->l3_page.pfn = ((pa) >> PAGE_SHIFT);
+                        next_pte->l3_page.is_page = 1;
+                        next_pte->l3_page.is_valid = 1;
                         set_pte_flags(next_pte, flags, USER_PTE);
                 }
         }
@@ -358,7 +361,7 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
         if (flag < 0) {
                 return flag;
         }
-        return flag;
+        return NORMAL_MEMORY;
 
         /* LAB 2 TODO 3 END */
 }
@@ -372,6 +375,76 @@ int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
          * unmapped.
          */
 
+        int flag;
+
+        if (len >= SIZE_1G) {
+                len = ROUND_UP(len, SIZE_1G);
+
+                for (size_t i = 0; i < len; i += SIZE_1G, va += SIZE_1G) {
+                        ptp_t *next_ptp = pgtbl;
+                        pte_t *next_pte = NULL;
+
+                        for (int k = 0; k <= 1; ++k) {
+                                flag = get_next_ptp(next_ptp,
+                                                    k,
+                                                    va,
+                                                    &next_ptp,
+                                                    &next_pte,
+                                                    true);
+
+                                if (flag < 0) {
+                                        kdebug("Return Error\n");
+                                        return flag;
+                                }
+                        }
+                        next_pte->pte = (next_pte->pte & (~(0x1UL)));
+                }
+        } else if (len >= SIZE_2M) {
+                len = ROUND_UP(len, SIZE_2M);
+
+                for (size_t i = 0; i < len; i += SIZE_2M, va += SIZE_2M) {
+                        ptp_t *next_ptp = pgtbl;
+                        pte_t *next_pte = NULL;
+                        for (int k = 0; k <= 2; ++k) {
+                                flag = get_next_ptp(next_ptp,
+                                                    k,
+                                                    va,
+                                                    &next_ptp,
+                                                    &next_pte,
+                                                    true);
+
+                                if (flag < 0) {
+                                        kdebug("Return Error\n");
+                                        return flag;
+                                }
+                        }
+                        next_pte->pte = (next_pte->pte & (~(0x1UL)));
+                }
+        } else {
+                len = ROUND_UP(len, SIZE_4K);
+
+                for (size_t i = 0; i < len; i += SIZE_4K, va += SIZE_4K) {
+                        ptp_t *next_ptp = pgtbl;
+                        pte_t *next_pte = NULL;
+
+                        for (int k = 0; k <= 3; ++k) {
+                                flag = get_next_ptp(next_ptp,
+                                                    k,
+                                                    va,
+                                                    &next_ptp,
+                                                    &next_pte,
+                                                    true);
+
+                                if (flag < 0) {
+                                        kdebug("Return Error\n");
+                                        return flag;
+                                }
+                        }
+                        next_pte->pte = (next_pte->pte & (~(0x1UL)));
+                }
+        }
+
+        return NORMAL_MEMORY;
         /* LAB 2 TODO 3 END */
 }
 
@@ -407,6 +480,7 @@ void lab2_test_page_table(void)
 
                 free_page_table(pgtbl);
                 lab_check(ok, "Map & unmap one page");
+                BUG_ON(!ok);
         }
         {
                 bool ok = true;
@@ -461,6 +535,7 @@ void lab2_test_page_table(void)
                 ret = map_range_in_pgtbl(
                         pgtbl, 0x100000000, 0x100000000, len, flags);
                 lab_assert(ret == 0);
+                lab_check(ok, "Map & unmap huge range");
                 used_mem =
                         free_mem - get_free_mem_size_from_buddy(&global_mem[0]);
 
@@ -472,11 +547,13 @@ void lab2_test_page_table(void)
 
                 ret = unmap_range_in_pgtbl(pgtbl, 0x100000000, len);
                 lab_assert(ret == 0);
+                lab_check(ok, "Map & unmap huge range");
 
                 for (vaddr_t va = 0x100000000; va < 0x100000000 + len;
                      va += 5 * PAGE_SIZE + 0x100) {
                         ret = query_in_pgtbl(pgtbl, va, &pa, &pte);
                         lab_assert(ret == -ENOMAPPING);
+                        lab_check(ok, "Map & unmap huge range");
                 }
 
                 lab_check(used_mem < PAGE_SIZE * 8,
