@@ -40,6 +40,10 @@
 #define L2_INDEX_SHIFT ((1 * PAGE_ORDER) + PAGE_SHIFT)
 #define L3_INDEX_SHIFT ((0 * PAGE_ORDER) + PAGE_SHIFT)
 
+#define SIZE_4K (1UL << L3_INDEX_SHIFT)
+#define SIZE_2M (1UL << L2_INDEX_SHIFT)
+#define SIZE_1G (1UL << L1_INDEX_SHIFT)
+
 #define GET_L0_INDEX(addr) ((addr >> L0_INDEX_SHIFT) & PTP_INDEX_MASK)
 #define GET_L1_INDEX(addr) ((addr >> L1_INDEX_SHIFT) & PTP_INDEX_MASK)
 #define GET_L2_INDEX(addr) ((addr >> L2_INDEX_SHIFT) & PTP_INDEX_MASK)
@@ -57,10 +61,12 @@
 #define L2_BLOCK_MASK ((L2_PER_ENTRY_PAGES << PAGE_SHIFT) - 1)
 #define L3_PAGE_MASK  ((L3_PER_ENTRY_PAGES << PAGE_SHIFT) - 1)
 
+// Get special part of data to look into page table
 #define GET_VA_OFFSET_L1(va) (va & L1_BLOCK_MASK)
 #define GET_VA_OFFSET_L2(va) (va & L2_BLOCK_MASK)
 #define GET_VA_OFFSET_L3(va) (va & L3_PAGE_MASK)
 
+// table pte or block pte
 /* table format */
 // clang-format off
 typedef union {
@@ -147,6 +153,7 @@ typedef union {
 
 #define PTE_DESCRIPTOR_INVALID (0)
 
+// 4K page
 /* page_table_page type */
 typedef struct {
         pte_t ent[PTP_ENTRIES];
