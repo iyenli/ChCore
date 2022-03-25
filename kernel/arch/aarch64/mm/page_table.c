@@ -10,6 +10,11 @@
 
 #include <arch/mm/page_table.h>
 
+#define KERNEL_VADDR 0xffffff0000000000
+
+// char new_pgtbl0[SIZE_4K];
+// char new_pgtbl1[SIZE_4K];
+
 extern void set_ttbr0_el1(paddr_t);
 extern void set_ttbr1_el1(paddr_t);
 
@@ -297,7 +302,12 @@ int map_4k(void *pgtbl, vaddr_t va, paddr_t pa, vmr_prop_t flags)
         next_pte->l3_page.pfn = ((pa) >> L3_INDEX_SHIFT);
         next_pte->l3_page.is_page = 1;
         next_pte->l3_page.is_valid = 1;
-        set_pte_flags(next_pte, flags, USER_PTE);
+
+        if (va & (KERNEL_VADDR)) {
+                set_pte_flags(next_pte, flags, KERNEL_PTE);
+        } else {
+                set_pte_flags(next_pte, flags, USER_PTE);
+        }
 
         return NORMAL_MEMORY;
 }
@@ -603,14 +613,63 @@ int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
         /* LAB 2 TODO 4 END */
 }
 
-#define PHYSMEM_START (0x0UL)
-#define PHYSMEM_END   (0x40000000UL)
-#define KERNEL_VADDR  0xffffff0000000000
+#define PHYSMEM_START   (0x0UL)
+#define PERIPHERAL_BASE (0x3F000000UL) // 16 MB
+#define PHYSMEM_END     (0x40000000UL)
+
 void remap(void)
 {
-        // void *pgtbl0 = get_pages(0), *pgtbl1 = get_pages(0);
+        void *new_pgtbl0 = get_pages(0), *new_pgtbl1 = get_pages(0);
 
-        // set_page_table_both(pgtbl0, pgtbl1);
+        /**
+         * UXN: NOT SET VMR_EXEC
+         * ACCESSED, NG: Default set in function
+         * SHARED: Need Set here!
+         * NORMAL/DEVICE: VMR_DEVICE
+         */
+        memset(new_pgtbl0, 0, PAGE_SIZE);
+        memset(new_pgtbl1, 0, PAGE_SIZE);
+        map_range_in_pgtbl(new_pgtbl0,
+                           PHYSMEM_START,
+                           PHYSMEM_START,
+                           PERIPHERAL_BASE - PHYSMEM_START,
+                           0);
+
+        map_range_in_pgtbl(new_pgtbl0,
+                           PERIPHERAL_BASE,
+                           PERIPHERAL_BASE,
+                           PHYSMEM_END - PERIPHERAL_BASE,
+                           VMR_DEVICE);
+
+        map_range_in_pgtbl(new_pgtbl1,
+                           PHYSMEM_START | KERNEL_VADDR,
+                           PHYSMEM_START,
+                           PERIPHERAL_BASE - PHYSMEM_START,
+                           0);
+
+        map_range_in_pgtbl(new_pgtbl1,
+                           PERIPHERAL_BASE | KERNEL_VADDR,
+                           PERIPHERAL_BASE,
+                           PHYSMEM_END - PERIPHERAL_BASE,
+                           VMR_DEVICE);
+
+        map_range_in_pgtbl(new_pgtbl1,
+                           PHYSMEM_END | KERNEL_VADDR,
+                           PHYSMEM_END,
+                           SIZE_1G,
+                           VMR_DEVICE);
+
+        u64 pgtbl0_pa, pgtbl1_pa;
+        pte_t *pte;
+        int res1 = query_in_pgtbl(new_pgtbl1, new_pgtbl0, &pgtbl0_pa, &pte);
+        int res2 = query_in_pgtbl(new_pgtbl1, new_pgtbl1, &pgtbl1_pa, &pte);
+        kdebug("res1: %d, res2: %d \n", res1, res2);
+        kdebug("res1: 0x%llx, res2: 0x%llx \n", pgtbl0_pa, pgtbl1_pa);
+        kdebug("res1: 0x%llx, res2: 0x%llx \n",
+               (u64)new_pgtbl0,
+               (u64)new_pgtbl1);
+
+        set_page_table_both(pgtbl0_pa, pgtbl1_pa);
 }
 
 #ifdef CHCORE_KERNEL_TEST
