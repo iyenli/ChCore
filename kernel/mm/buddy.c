@@ -185,14 +185,18 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
                 return page;
         }
 
-        // buddy is free  delete from list
+        if (page->order != buddy->order) {
+                // kdebug("Seems dangerous, because buddy order not same. \
+                //  page order: %d, buddy order: %d",
+                //        page->order,
+                //        buddy->order);
+                return page;
+        }
+
+        // buddy is free  delete from lists
         list_del(&(page->node));
         list_del(&(buddy->node));
-        if (page->order != buddy->order) {
-                BUG("page order: %d, buddy order: %d",
-                    page->order,
-                    buddy->order);
-        }
+
         // delete two buddy chunks
         pool->free_lists[page->order].nr_free -= 2;
         BUG_ON((s64)pool->free_lists[page->order].nr_free < 0);

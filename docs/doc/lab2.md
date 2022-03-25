@@ -44,6 +44,8 @@
 
 <img src="https://s2.loli.net/2022/03/12/t193Gf6dg42kmjR.png" alt="2022-03-11 16-24-20 的屏幕截图" style="zoom:50%;" />
 
+在更新后重写(Copy)了一遍4K映射。发现了Buddy system的bug. 具体来说，认为存在不变量buddy order keep same. 设置了BUG_ON函数，然后在4K映射1G之后一直报错发现了这个想法其实是错误的。
+
 
 
 ## 6

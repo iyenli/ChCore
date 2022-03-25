@@ -9,3 +9,4 @@
 void arch_mm_init(void);
 void mm_init(void);
 void set_page_table(paddr_t pgtbl);
+void remap(void);

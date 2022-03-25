@@ -11,20 +11,29 @@
 #include <arch/mm/page_table.h>
 
 extern void set_ttbr0_el1(paddr_t);
+extern void set_ttbr1_el1(paddr_t);
 
-void set_page_table(paddr_t pgtbl)
+void set_page_table_both(paddr_t pgtbl0, paddr_t pgtbl1)
 {
-        set_ttbr0_el1(pgtbl);
+        set_ttbr0_el1(pgtbl0);
+        set_ttbr1_el1(pgtbl1);
 }
 
-#define USER_PTE 0
+void set_page_table(paddr_t pgtbl0)
+{
+        set_ttbr0_el1(pgtbl0);
+}
+
+#define USER_PTE   0
+#define KERNEL_PTE 1
 /*
  * the 3rd arg means the kind of PTE.
  */
 static int set_pte_flags(pte_t *entry, vmr_prop_t flags, int kind)
 {
         // Only consider USER PTE now.
-        BUG_ON(kind != USER_PTE);
+        // For remap, modify PXN
+        // BUG_ON(kind != USER_PTE);
 
         /*
          * Current access permission (AP) setting:
@@ -43,7 +52,11 @@ static int set_pte_flags(pte_t *entry, vmr_prop_t flags, int kind)
                 entry->l3_page.UXN = AARCH64_MMU_ATTR_PAGE_UXN;
 
         // EL1 cannot directly execute EL0 accessiable region.
-        entry->l3_page.PXN = AARCH64_MMU_ATTR_PAGE_PXN;
+        if (kind == USER_PTE) {
+                entry->l3_page.PXN = AARCH64_MMU_ATTR_PAGE_PXN;
+        } else {
+                entry->l3_page.PXN = 0; // kernel can execute the code
+        }
         // Set AF (access flag) in advance.
         entry->l3_page.AF = AARCH64_MMU_ATTR_PAGE_AF_ACCESSED;
         // Mark the mapping as not global
@@ -273,7 +286,7 @@ int map_4k(void *pgtbl, vaddr_t va, paddr_t pa, vmr_prop_t flags)
                         next_ptp, k, va, &next_ptp, &next_pte, true);
 
                 if (flag < 0) {
-                        // kdebug("Return Error when map 4K page\n");
+                        kdebug("Return Error when map 4K page\n");
                         return flag;
                 }
         }
@@ -341,9 +354,120 @@ int map_1G(void *pgtbl, vaddr_t va, paddr_t pa, vmr_prop_t flags)
         return NORMAL_MEMORY;
 }
 
+int unmap_4k(void *pgtbl, vaddr_t va)
+{
+        int flag;
+        ptp_t *next_ptp = pgtbl;
+        pte_t *next_pte = NULL;
+
+        for (int k = 0; k <= 3; ++k) {
+                flag = get_next_ptp(
+                        next_ptp, k, va, &next_ptp, &next_pte, false);
+
+                if (flag < 0) {
+                        kdebug("Return Error\n");
+                        return flag;
+                }
+        }
+        next_pte->pte = (next_pte->pte & (~(0x1ULL)));
+        BUG_ON(next_pte->l3_page.is_valid != 0);
+
+        return NORMAL_MEMORY;
+}
+
+int unmap_2M(void *pgtbl, vaddr_t va)
+{
+        int flag;
+        ptp_t *next_ptp = pgtbl;
+        pte_t *next_pte = NULL;
+
+        for (int k = 0; k <= 2; ++k) {
+                flag = get_next_ptp(
+                        next_ptp, k, va, &next_ptp, &next_pte, false);
+
+                if (flag < 0) {
+                        // kdebug("Return Error\n");
+                        return flag;
+                }
+        }
+        next_pte->pte = (next_pte->pte & (~(0x1UL)));
+        BUG_ON(next_pte->l2_block.is_valid != 0);
+        return NORMAL_MEMORY;
+}
+
+int unmap_1G(void *pgtbl, vaddr_t va)
+{
+        int flag;
+        ptp_t *next_ptp = pgtbl;
+        pte_t *next_pte = NULL;
+
+        for (int k = 0; k <= 1; ++k) {
+                flag = get_next_ptp(
+                        next_ptp, k, va, &next_ptp, &next_pte, false);
+
+                if (flag < 0) {
+                        // kdebug("Return Error\n");
+                        return flag;
+                }
+        }
+        next_pte->pte = (next_pte->pte & (~(0x1UL)));
+        BUG_ON(next_pte->l1_block.is_valid != 0);
+        return NORMAL_MEMORY;
+}
+
+// Just support 4K
 int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                        vmr_prop_t flags)
 {
+        int flag;
+        vaddr_t va_end = (va + len);
+        BUG_ON((va & (SIZE_4K - 1)) || (len & (SIZE_4K - 1)));
+
+        for (; va < va_end; va += SIZE_4K, pa += SIZE_4K) {
+                if ((flag = map_4k(pgtbl, va, pa, flags)) < 0) {
+                        kdebug("return error in map stage 1");
+                        return flag;
+                }
+        }
+
+        BUG_ON(va != va_end);
+        return NORMAL_MEMORY;
+}
+
+// Just support 4K
+int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
+{
+        /* LAB 2 TODO 3 BEGIN */
+        /*
+         * Hint: Walk through each level of page table using `get_next_ptp`,
+         * mark the final level pte as invalid. Iterate until all pages are
+         * unmapped.
+         */
+
+        int flag;
+
+        vaddr_t va_end = va + len;
+        BUG_ON((va & (SIZE_4K - 1)) || (len & (SIZE_4K - 1)));
+
+        for (; va < va_end; va += SIZE_4K) {
+                if ((flag = unmap_4k(pgtbl, va)) < 0) {
+                        kdebug("return error in unmap stage 1");
+                        return flag;
+                }
+        }
+        if (va == va_end) {
+                return NORMAL_MEMORY;
+        }
+
+        BUG("Unreachable here.");
+        return -ENOMAPPING; /* LAB 2 TODO 3 END */
+        /* LAB 2 TODO 3 END */
+}
+
+int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
+                            vmr_prop_t flags)
+{
+        /* LAB 2 TODO 4 BEGIN */
         /* LAB 2 TODO 3 BEGIN */
         /*
          * Hint: Walk through each level of page table using `get_next_ptp`,
@@ -415,78 +539,12 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
 
         BUG("Unreachable here.");
         return -ENOMAPPING; /* LAB 2 TODO 3 END */
+        /* LAB 2 TODO 4 END */
 }
 
-int unmap_4k(void *pgtbl, vaddr_t va)
+int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
 {
-        int flag;
-        ptp_t *next_ptp = pgtbl;
-        pte_t *next_pte = NULL;
-
-        for (int k = 0; k <= 3; ++k) {
-                flag = get_next_ptp(
-                        next_ptp, k, va, &next_ptp, &next_pte, false);
-
-                if (flag < 0) {
-                        // kdebug("Return Error\n");
-                        return flag;
-                }
-        }
-        next_pte->pte = (next_pte->pte & (~(0x1UL)));
-        BUG_ON(next_pte->l3_page.is_valid != 0);
-
-        return NORMAL_MEMORY;
-}
-
-int unmap_2M(void *pgtbl, vaddr_t va)
-{
-        int flag;
-        ptp_t *next_ptp = pgtbl;
-        pte_t *next_pte = NULL;
-
-        for (int k = 0; k <= 2; ++k) {
-                flag = get_next_ptp(
-                        next_ptp, k, va, &next_ptp, &next_pte, false);
-
-                if (flag < 0) {
-                        // kdebug("Return Error\n");
-                        return flag;
-                }
-        }
-        next_pte->pte = (next_pte->pte & (~(0x1UL)));
-        BUG_ON(next_pte->l2_block.is_valid != 0);
-        return NORMAL_MEMORY;
-}
-
-int unmap_1G(void *pgtbl, vaddr_t va)
-{
-        int flag;
-        ptp_t *next_ptp = pgtbl;
-        pte_t *next_pte = NULL;
-
-        for (int k = 0; k <= 1; ++k) {
-                flag = get_next_ptp(
-                        next_ptp, k, va, &next_ptp, &next_pte, false);
-
-                if (flag < 0) {
-                        // kdebug("Return Error\n");
-                        return flag;
-                }
-        }
-        next_pte->pte = (next_pte->pte & (~(0x1UL)));
-        BUG_ON(next_pte->l1_block.is_valid != 0);
-        return NORMAL_MEMORY;
-}
-
-int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
-{
-        /* LAB 2 TODO 3 BEGIN */
-        /*
-         * Hint: Walk through each level of page table using `get_next_ptp`,
-         * mark the final level pte as invalid. Iterate until all pages are
-         * unmapped.
-         */
-
+        /* LAB 2 TODO 4 BEGIN */
         int flag;
 
         vaddr_t va_end = va + len, tmp_va_end = 0;
@@ -542,22 +600,17 @@ int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
         }
         BUG("Unreachable here.");
         return NORMAL_MEMORY;
-        /* LAB 2 TODO 3 END */
-}
-
-int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
-                            vmr_prop_t flags)
-{
-        /* LAB 2 TODO 4 BEGIN */
-
         /* LAB 2 TODO 4 END */
 }
 
-int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
+#define PHYSMEM_START (0x0UL)
+#define PHYSMEM_END   (0x40000000UL)
+#define KERNEL_VADDR  0xffffff0000000000
+void remap(void)
 {
-        /* LAB 2 TODO 4 BEGIN */
+        // void *pgtbl0 = get_pages(0), *pgtbl1 = get_pages(0);
 
-        /* LAB 2 TODO 4 END */
+        // set_page_table_both(pgtbl0, pgtbl1);
 }
 
 #ifdef CHCORE_KERNEL_TEST
