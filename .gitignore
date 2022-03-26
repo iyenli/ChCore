@@ -14,6 +14,7 @@ cscope.*
 !/**/firmware/*.elf
 
 /build
+/.idea
 _build
 _install
 .vscode
