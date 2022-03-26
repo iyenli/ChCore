@@ -74,15 +74,11 @@
 
 ## 9
 
-基本思路是将每个分段分别细粒度的映射，然后分别配置权限位。每个分段分别的处理为：
+基本思路是将每个分段分别细粒度的映射，然后把物理地址写入TLBR. 包括：
 
-- `init`
-- `.text`
-- `.data`
-- `.rodata`
-- `.bss`
+- 改写set_ttbr0_el1, 能够修改ttbr1
+- 改写`set_pte_flags`, 增加KERNEL_PTE选项，设置为PX.
+- 改写`map_4k`, 检测到高地址空间则使用KERNEL_PTE选项
+- Get ttbr0/ttbr1 L0 page, 映射，然后将物理基地址set ttbr0/1
 
-
-
-
-
+函数在`page_table.c` 中。目前还有一点Bug. 可能会先写异常向量表之后回来Debug. `remap`函数目前禁用。
