@@ -101,8 +101,9 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
                         seg_map_sz = ROUND_UP(p_vaddr + seg_sz, PAGE_SIZE)
                                      - ROUND_DOWN(p_vaddr, PAGE_SIZE);
 
-                        /* Allocate physical addr region */
+                        /* Allocate physical addr region immediately */
                         r = create_pmo(seg_map_sz, PMO_DATA, cap_group, &pmo);
+
                         if (r < 0) {
                                 goto out_free_cap;
                         }
@@ -110,9 +111,12 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
 
                         /* attention: pmo start is physical addr! */
                         vaddr_t start = phys_to_virt(pmo->start);
+                        kdebug("Start vaddr expected: %llx, actual vaddr: %llx\n",
+                               ROUND_DOWN(p_vaddr, PAGE_SIZE),
+                               start);
                         memset(start, 0, seg_map_sz);
 
-                        start += p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE);
+                        start += (p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE));
                         memcpy(start,
                                bin + elf->p_headers[i].p_offset,
                                elf->p_headers[i].p_filesz);
@@ -414,7 +418,10 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
-
+        current_thread->thread_ctx->state;
+        obj_free(current_thread->cap_group);
+        obj_free(current_thread->vmspace);
+        obj_free(current_thread);
         /* LAB 3 TODO END */
         printk("Lab 3 hang.\n");
         while (1) {

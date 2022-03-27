@@ -55,12 +55,24 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
                 fault_addr = ROUND_DOWN(fault_addr, PAGE_SIZE);
                 /* LAB 3 TODO BEGIN */
-
+                pa = get_page_from_pmo(pmo, index);
                 /* LAB 3 TODO END */
+
                 if (pa == 0) {
                         /* Not committed before. Then, allocate the physical
                          * page. */
+
                         /* LAB 3 TODO BEGIN */
+
+                        pa = virt_to_phys(get_pages(0));
+                        memset((void *)(phys_to_virt(pa)), 0, PAGE_SIZE);
+
+                        commit_page_to_pmo(pmo, index, pa);
+                        map_range_in_pgtbl(vmspace->pgtbl,
+                                           fault_addr,
+                                           pa,
+                                           PAGE_SIZE,
+                                           perm);
 
                         /* LAB 3 TODO END */
 #ifdef CHCORE_LAB3_TEST
@@ -89,7 +101,12 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * Repeated mapping operations are harmless.
                          */
                         /* LAB 3 TODO BEGIN */
-
+                        vaddr_t actual_vaddr = vmr->start;
+                        map_range_in_pgtbl(vmspace->pgtbl,
+                                           fault_addr,
+                                           pa,
+                                           PAGE_SIZE,
+                                           perm);
                         /* LAB 3 TODO END */
 #ifdef CHCORE_LAB3_TEST
                         printk("Test: Test: Successfully map for pa not 0\n");
@@ -113,6 +130,8 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
                 break;
         }
+
+        /* We just need handle pf above type of page! */
         case PMO_FORBID: {
                 kinfo("Forbidden memory access (pmo->type is PMO_FORBID).\n");
                 BUG_ON(1);
