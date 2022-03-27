@@ -14,6 +14,12 @@
 #include <object/cap_group.h>
 #include <sched/context.h>
 
+struct lru_node {
+        lru_node *prev;
+        lru_node *next;
+
+} lru_node;
+
 int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 {
         struct vmregion *vmr;
@@ -54,6 +60,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                 index = offset / PAGE_SIZE;
 
                 fault_addr = ROUND_DOWN(fault_addr, PAGE_SIZE);
+
                 /* LAB 3 TODO BEGIN */
                 pa = get_page_from_pmo(pmo, index);
                 /* LAB 3 TODO END */
@@ -101,7 +108,6 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * Repeated mapping operations are harmless.
                          */
                         /* LAB 3 TODO BEGIN */
-                        vaddr_t actual_vaddr = vmr->start;
                         map_range_in_pgtbl(vmspace->pgtbl,
                                            fault_addr,
                                            pa,
