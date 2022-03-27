@@ -14,20 +14,78 @@
 #include <object/cap_group.h>
 #include <sched/context.h>
 
-struct lru_node {
-        lru_node *prev;
-        lru_node *next;
+#define LRU_POOL_SIZE 5
+#define LRU_TEST      1
 
-} lru_node;
+#if LRU_TEST
+struct lru_node {
+        struct list_head node;
+        struct vmregion *vmr;
+        int index;
+};
+
+struct lru_node *root;
+void *real_memory;
+int pool_size;
+
+/******************************************************
+ * tool function
+ * ****************************************************/
+
+/**
+ * @brief Get the Free Index object
+ * Called at least one free slot
+ */
+int GetFreeIndex(void)
+{
+        struct lru_node *tmp_node = root->node.next;
+        bool used[LRU_POOL_SIZE];
+        memset(used, 0, LRU_POOL_SIZE);
+
+        while (tmp_node != &(root->node)) {
+                used[tmp_node->index] = true;
+                tmp_node = (tmp_node->node.next);
+        }
+
+        int index_to_allocate = -1;
+        for (int i = 0; i < LRU_POOL_SIZE; ++i) {
+                if (!used[i]) {
+                        index_to_allocate = i;
+                        break;
+                }
+        }
+
+        BUG_ON(index_to_allocate == -1);
+        return index_to_allocate;
+}
+
+#endif
 
 int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 {
+#if LRU_TEST
+        if (root == NULL) {
+                // initialize: kmalloc and set link list
+                root = (struct lru_node *)(kmalloc(sizeof(struct lru_node)));
+                init_list_head(&root->node);
+                root->index = -1; // i'm root!
+                root->vmr = NULL;
+                pool_size = 0;
+
+                real_memory = kmalloc(LRU_POOL_SIZE * PAGE_SIZE);
+        }
+#endif
+
         struct vmregion *vmr;
         struct pmobject *pmo;
         paddr_t pa;
         u64 offset;
         u64 index;
         int ret = 0;
+
+#if LRU_TEST
+
+#endif
 
         vmr = find_vmr_for_va(vmspace, fault_addr);
         if (vmr == NULL) {
@@ -70,8 +128,46 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * page. */
 
                         /* LAB 3 TODO BEGIN */
+                        struct lru_node *new_node;
 
+#if LRU_TEST
+
+                        if (pool_size >= LRU_POOL_SIZE) {
+#ifdef CHCORE_LAB3_TEST
+                                printk("Test LRU: Kick out a page.\n");
+#endif
+                                struct lru_node *to_delete = root->node.prev;
+                                list_del(to_delete);
+
+                                // no address yet
+                                // TODO: Where we flush page?
+                                // TODO: How do we know page is flushed?
+                                // TODO: How to map to two phys page as one is
+                                //       "real memory" while the other is
+                                //       "disk"?
+                                radix_del(to_delete->vmr, index);
+                                kfree(to_delete);
+                                --pool_size;
+                        }
+
+#endif
+                        /* kick out and alloc */
+
+#if LRU_TEST
+                        new_node = (struct lru_node *)(kmalloc(
+                                sizeof(struct lru_node)));
+                        list_add(new_node, root);
+                        ++pool_size;
+                        new_node->index = GetFreeIndex();
+                        new_node->vmr = vmr;
+#endif
+
+#if LRU_TEST
+                        pa = real_memory + PAGE_SIZE * new_node->index;
+#else
                         pa = virt_to_phys(get_pages(0));
+#endif
+
                         memset((void *)(phys_to_virt(pa)), 0, PAGE_SIZE);
 
                         commit_page_to_pmo(pmo, index, pa);
@@ -108,6 +204,8 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * Repeated mapping operations are harmless.
                          */
                         /* LAB 3 TODO BEGIN */
+
+                        /* TODO: Make the lru node to the front of lru queue */
                         map_range_in_pgtbl(vmspace->pgtbl,
                                            fault_addr,
                                            pa,
