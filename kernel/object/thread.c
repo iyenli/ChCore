@@ -418,10 +418,11 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
-        current_thread->thread_ctx->state;
-        obj_free(current_thread->cap_group);
-        obj_free(current_thread->vmspace);
-        obj_free(current_thread);
+        current_thread->thread_ctx->state = TS_EXIT;
+        current_thread->thread_ctx->thread_exit_state = TE_EXITED;
+        // obj_free(current_thread->cap_group);
+        // obj_free(current_thread->vmspace);
+        // obj_free(current_thread);
         /* LAB 3 TODO END */
         printk("Lab 3 hang.\n");
         while (1) {

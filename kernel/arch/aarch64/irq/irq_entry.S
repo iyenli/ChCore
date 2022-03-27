@@ -151,9 +151,7 @@ error_el1t:
 error_el1h:
 sync_el1t:
 	/* LAB 3 TODO BEGIN */
-
 	bl unexpected_handler
-
 	/* LAB 3 TODO END */
 
 sync_el1h:

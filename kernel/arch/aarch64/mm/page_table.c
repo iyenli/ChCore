@@ -629,6 +629,7 @@ void remap(void)
          */
         memset(new_pgtbl0, 0, PAGE_SIZE);
         memset(new_pgtbl1, 0, PAGE_SIZE);
+
         map_range_in_pgtbl(new_pgtbl0,
                            PHYSMEM_START,
                            PHYSMEM_START,
@@ -642,27 +643,29 @@ void remap(void)
                            VMR_DEVICE);
 
         map_range_in_pgtbl(new_pgtbl1,
-                           PHYSMEM_START | KERNEL_VADDR,
+                           PHYSMEM_START + KERNEL_VADDR,
                            PHYSMEM_START,
                            PERIPHERAL_BASE - PHYSMEM_START,
                            0);
 
         map_range_in_pgtbl(new_pgtbl1,
-                           PERIPHERAL_BASE | KERNEL_VADDR,
+                           PERIPHERAL_BASE + KERNEL_VADDR,
                            PERIPHERAL_BASE,
                            PHYSMEM_END - PERIPHERAL_BASE,
                            VMR_DEVICE);
 
         map_range_in_pgtbl(new_pgtbl1,
-                           PHYSMEM_END | KERNEL_VADDR,
+                           PHYSMEM_END + KERNEL_VADDR,
                            PHYSMEM_END,
                            SIZE_1G,
                            VMR_DEVICE);
 
-        u64 pgtbl0_pa, pgtbl1_pa;
-        pte_t *pte;
-        int res1 = query_in_pgtbl(new_pgtbl1, new_pgtbl0, &pgtbl0_pa, &pte);
-        int res2 = query_in_pgtbl(new_pgtbl1, new_pgtbl1, &pgtbl1_pa, &pte);
+        u64 pgtbl0_pa = virt_to_phys(new_pgtbl0);
+        u64 pgtbl1_pa = virt_to_phys(new_pgtbl1);
+        // pte_t *pte;
+        // int res1 = query_in_pgtbl(new_pgtbl1, new_pgtbl0, &pgtbl0_pa, &pte);
+        // int res2 = query_in_pgtbl(new_pgtbl1, new_pgtbl1, &pgtbl1_pa, &pte);
+
         kdebug("res1: %d, res2: %d \n", res1, res2);
         kdebug("res1: 0x%llx, res2: 0x%llx \n", pgtbl0_pa, pgtbl1_pa);
         kdebug("res1: 0x%llx, res2: 0x%llx \n",
