@@ -15,13 +15,23 @@
 #include <sched/context.h>
 
 #define LRU_POOL_SIZE 5
-#define LRU_TEST      1
+#define LRU_TEST      0
 
 #if LRU_TEST
 struct lru_node {
         struct list_head node;
-        struct vmregion *vmr;
+        /* index in "real" memory, [0, 4] here */
         int index;
+
+        struct vaddr_node *va;
+};
+
+// vmregion and pmo index to change pmo entry to disk area
+struct vaddr_node {
+        struct list_head node;
+        struct vmregion *vmr;
+        /* for recommitting to pmo */
+        int pmo_index;
 };
 
 struct lru_node *root;
@@ -38,11 +48,15 @@ int pool_size;
  */
 int GetFreeIndex(void)
 {
+        BUG_ON(pool_size >= LRU_POOL_SIZE);
+
         struct lru_node *tmp_node = root->node.next;
         bool used[LRU_POOL_SIZE];
         memset(used, 0, LRU_POOL_SIZE);
 
         while (tmp_node != &(root->node)) {
+                BUG_ON(tmp_node->index < 0 || tmp_node->index >= LRU_POOL_SIZE);
+
                 used[tmp_node->index] = true;
                 tmp_node = (tmp_node->node.next);
         }
@@ -59,6 +73,51 @@ int GetFreeIndex(void)
         return index_to_allocate;
 }
 
+/**
+ * @brief evcit page, kmalloc new page and copy, then unmap
+ * @return true when success
+ */
+bool EvcitPageByNode(struct vmspace *vmspace, struct lru_node *to_delete)
+{
+        // BUG("ss");
+        list_del(&(to_delete->node));
+        struct vaddr_node *tmp_node = (to_delete->va);
+
+        do {
+                // vaddr is pmo_index entry in vmr
+                unmap_range_in_pgtbl(vmspace->pgtbl,
+                                     tmp_node->vmr->start
+                                             + PAGE_SIZE * tmp_node->pmo_index,
+                                     PAGE_SIZE);
+
+                tmp_node = tmp_node->node.next;
+        } while (tmp_node != to_delete->va);
+
+        // memory copy to the "disk" memory
+        paddr_t new_pa = virt_to_phys((vaddr_t)get_pages(0));
+
+        memcpy(phys_to_virt(new_pa),
+               real_memory + PAGE_SIZE * to_delete->index,
+               PAGE_SIZE);
+
+        tmp_node = (to_delete->va);
+        do {
+                radix_del(tmp_node->vmr->pmo->radix, tmp_node->pmo_index);
+                commit_page_to_pmo(
+                        tmp_node->vmr->pmo, tmp_node->pmo_index, new_pa);
+                // next time, will search to this new pa and get back to real
+                // memory
+                tmp_node = tmp_node->node.next;
+
+        } while (tmp_node != to_delete->va);
+
+        // TODO: Solve memory leak here
+        // avoid memory leak
+        kfree(to_delete);
+        --pool_size;
+        return true;
+}
+
 #endif
 
 int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
@@ -69,7 +128,6 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                 root = (struct lru_node *)(kmalloc(sizeof(struct lru_node)));
                 init_list_head(&root->node);
                 root->index = -1; // i'm root!
-                root->vmr = NULL;
                 pool_size = 0;
 
                 real_memory = kmalloc(LRU_POOL_SIZE * PAGE_SIZE);
@@ -83,11 +141,8 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
         u64 index;
         int ret = 0;
 
-#if LRU_TEST
-
-#endif
-
         vmr = find_vmr_for_va(vmspace, fault_addr);
+
         if (vmr == NULL) {
                 printk("handle_trans_fault: no vmr found for va 0x%lx!\n",
                        fault_addr);
@@ -104,6 +159,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
         pmo = vmr->pmo;
         switch (pmo->type) {
+                // Key idea: NEVER Map vaddr not from real memory to page table!
         case PMO_ANONYM:
         case PMO_SHM: {
                 vmr_prop_t perm;
@@ -128,42 +184,35 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * page. */
 
                         /* LAB 3 TODO BEGIN */
-                        struct lru_node *new_node;
-
 #if LRU_TEST
-
+                        kdebug("Allocate new memory");
+                        struct lru_node *new_node;
+                        /* evcit a page, kmalloc a "disk page", memcpy */
+                        /* to get in page fault handler again,  */
                         if (pool_size >= LRU_POOL_SIZE) {
-#ifdef CHCORE_LAB3_TEST
-                                printk("Test LRU: Kick out a page.\n");
-#endif
-                                struct lru_node *to_delete = root->node.prev;
-                                list_del(to_delete);
-
-                                // no address yet
-                                // TODO: Where we flush page?
-                                // TODO: How do we know page is flushed?
-                                // TODO: How to map to two phys page as one is
-                                //       "real memory" while the other is
-                                //       "disk"?
-                                radix_del(to_delete->vmr, index);
-                                kfree(to_delete);
-                                --pool_size;
+                                kdebug("Evcit happens");
+                                EvcitPageByNode(vmspace, root->node.prev);
                         }
 
-#endif
                         /* kick out and alloc */
-
-#if LRU_TEST
                         new_node = (struct lru_node *)(kmalloc(
                                 sizeof(struct lru_node)));
-                        list_add(new_node, root);
-                        ++pool_size;
+
                         new_node->index = GetFreeIndex();
-                        new_node->vmr = vmr;
+                        list_add(&new_node->node, &root->node);
+                        ++pool_size;
+
+                        // init list
+                        new_node->va = (struct vaddr_node *)kmalloc(
+                                sizeof(struct vaddr_node));
+                        init_list_head(&new_node->va->node);
+                        new_node->va->vmr = vmr;
+                        new_node->va->pmo_index = index;
 #endif
 
 #if LRU_TEST
-                        pa = real_memory + PAGE_SIZE * new_node->index;
+                        pa = virt_to_phys(real_memory
+                                          + PAGE_SIZE * new_node->index);
 #else
                         pa = virt_to_phys(get_pages(0));
 #endif
@@ -206,11 +255,92 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                         /* LAB 3 TODO BEGIN */
 
                         /* TODO: Make the lru node to the front of lru queue */
+#if LRU_TEST
+                        // has allocated real memory, just map
+                        pa = ROUND_DOWN(pa, PAGE_SIZE);
+                        if ((paddr_t)pa >= virt_to_phys(real_memory)
+                            && (paddr_t)pa
+                                       < virt_to_phys(real_memory)
+                                                 + LRU_POOL_SIZE * PAGE_SIZE) {
+                                // find lru node, put ahead of list and add into
+                                // vaddr list
+                                int pa_index = (pa - virt_to_phys(real_memory))
+                                               / PAGE_SIZE;
+                                kdebug("Map a more vpage to allocated ppage");
+
+                                /* tmp node is the actuall allocated node */
+                                struct lru_node *tmp_node = root->node.next;
+                                while (tmp_node != &(root->node)) {
+                                        if (tmp_node->index == pa_index) {
+                                                break;
+                                        }
+                                        tmp_node = (tmp_node->node.next);
+                                }
+
+                                // allocate new vaddr node for tmp node
+                                struct vaddr_node *new_node =
+                                        (struct vaddr_node *)kmalloc(
+                                                sizeof(struct vaddr_node));
+                                list_add(&new_node->node, &tmp_node->va->node);
+                                new_node->pmo_index = index;
+                                new_node->vmr = vmr;
+
+                                map_range_in_pgtbl(vmspace->pgtbl,
+                                                   fault_addr,
+                                                   pa,
+                                                   PAGE_SIZE,
+                                                   perm);
+
+                                // lru
+                                list_del(&tmp_node->node);
+                                list_add(&tmp_node->node, &root->node);
+
+                        } else {
+                                // have been evcited, memcopy and evcit a page
+                                // and remap, rebuild
+                                struct lru_node *new_node;
+                                if (pool_size >= LRU_POOL_SIZE) {
+                                        EvcitPageByNode(vmspace,
+                                                        root->node.prev);
+                                }
+
+                                new_node = (struct lru_node *)(kmalloc(
+                                        sizeof(struct lru_node)));
+                                new_node->index = GetFreeIndex();
+                                list_add(new_node, root);
+
+                                ++pool_size;
+
+                                // init list
+                                new_node->va = (struct vaddr_node *)kmalloc(
+                                        sizeof(struct vaddr_node));
+                                init_list_head(&new_node->va->node);
+                                new_node->va->vmr = vmr;
+                                new_node->va->pmo_index = index;
+
+                                paddr_t real_pa = virt_to_phys(
+                                        real_memory
+                                        + PAGE_SIZE * new_node->index);
+
+                                memcpy((void *)(phys_to_virt(real_pa)),
+                                       (void *)(phys_to_virt(pa)),
+                                       PAGE_SIZE);
+
+                                radix_del(pmo->radix, index);
+                                commit_page_to_pmo(pmo, index, real_pa);
+                                map_range_in_pgtbl(vmspace->pgtbl,
+                                                   fault_addr,
+                                                   real_pa,
+                                                   PAGE_SIZE,
+                                                   perm);
+                        }
+#else
                         map_range_in_pgtbl(vmspace->pgtbl,
                                            fault_addr,
                                            pa,
                                            PAGE_SIZE,
                                            perm);
+#endif
                         /* LAB 3 TODO END */
 #ifdef CHCORE_LAB3_TEST
                         printk("Test: Test: Successfully map for pa not 0\n");
