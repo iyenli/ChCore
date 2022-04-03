@@ -78,8 +78,8 @@
 
 在`pagefault_handler.c`中，被`#if LRU_TEST`包裹的程序段是LRU Replacer的实现。将对应的宏改为True之后即可测试正确性。本地测试如下：
 
-- LRU POOL SIZE == 1， 调用了驱逐和恢复的程序段，但是无法获得满分，但是能顺利进入`userland`并挂起；
-- LRU POOL SIZE > 1, 未调用驱逐程序段，可以获得满分，进入`userland`.
+- LRU POOL SIZE == 1， 调用了驱逐和恢复的程序段，能顺利进入`userland`并挂起；
+- LRU POOL SIZE > 1, 未调用驱逐程序段，也可正常进入`userland`.
 
 <img src="https://s2.loli.net/2022/04/03/1EdT5tOwZ8Kx36F.png" alt="2022-04-03 15-28-32 的屏幕截图" style="zoom: 80%;" />
 
