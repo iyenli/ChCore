@@ -55,6 +55,7 @@ void main(paddr_t boot_flag)
         /* Init mm */
         mm_init();
         kinfo("[ChCore] mm init finished\n");
+        // remap();
 
 #ifdef CHCORE_KERNEL_TEST
         void lab2_test_kmalloc(void);

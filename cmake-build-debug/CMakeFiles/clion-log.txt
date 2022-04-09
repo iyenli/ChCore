@@ -1,0 +1,10 @@
+/home/lee/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/213.7172.20/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/lee/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/213.7172.20/bin/ninja/linux/ninja -G Ninja /home/lee/OS/chcore-lab
+CMake Error at CMakeLists.txt:26 (message):
+  Do not run CMake command directly, use `./chbuild` instead
+Call Stack (most recent call first):
+  config.cmake:1 (chcore_config)
+  CMakeLists.txt:33 (include)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/lee/OS/chcore-lab/cmake-build-debug/CMakeFiles/CMakeOutput.log".

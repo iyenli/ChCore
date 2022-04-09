@@ -60,6 +60,11 @@ int cap_group_init(struct cap_group *cap_group, unsigned int size, u64 pid)
         struct slot_table *slot_table = &cap_group->slot_table;
         /* LAB 3 TODO BEGIN */
 
+        cap_group->thread_cnt = 0;
+        init_list_head(&(cap_group->thread_list));
+        slot_table_init(slot_table, size);
+        cap_group->pid = pid;
+
         /* LAB 3 TODO END */
         return 0;
 }
@@ -150,6 +155,7 @@ out_fail:
         return r;
 }
 
+/* support skip checking type */
 void *get_opaque(struct cap_group *cap_group, int slot_id, bool type_valid,
                  int type)
 {
@@ -217,18 +223,19 @@ int sys_create_cap_group(u64 pid, u64 cap_group_name, u64 name_len, u64 pcid)
                 kinfo("An unthorized process tries to create cap_group.\n");
                 return -EPERM;
         }
+
         /* LAB 3 TODO BEGIN */
         /* cap current cap_group */
-
-
+        new_cap_group = obj_alloc(CAP_GROUP_OBJ_ID, sizeof(struct cap_group));
         /* LAB 3 TODO END */
 
         if (!new_cap_group) {
                 r = -ENOMEM;
                 goto out_fail;
         }
-        /* LAB 3 TODO BEGIN */
 
+        /* LAB 3 TODO BEGIN */
+        cap_group_init(new_cap_group, BASE_OBJECT_NUM, pid);
         /* LAB 3 TODO END */
 
         cap = cap_alloc(current_cap_group, new_cap_group, 0);
@@ -237,7 +244,7 @@ int sys_create_cap_group(u64 pid, u64 cap_group_name, u64 name_len, u64 pcid)
                 goto out_free_obj_new_grp;
         }
 
-        /* 1st cap is cap_group */
+        /* 1st cap is cap_group itself */
         if (cap_copy(current_thread->cap_group, new_cap_group, cap)
             != CAP_GROUP_OBJ_ID) {
                 printk("init cap_group cap[0] is not cap_group\n");
@@ -247,7 +254,7 @@ int sys_create_cap_group(u64 pid, u64 cap_group_name, u64 name_len, u64 pcid)
 
         /* 2st cap is vmspace */
         /* LAB 3 TODO BEGIN */
-
+        vmspace = obj_alloc(VMSPACE_OBJ_ID, sizeof(struct vmspace));
         /* LAB 3 TODO END */
         if (!vmspace) {
                 r = -ENOMEM;
@@ -290,24 +297,36 @@ struct cap_group *create_root_cap_group(char *name, size_t name_len)
         struct cap_group *cap_group;
         struct vmspace *vmspace;
         int slot_id;
-        /* LAB 3 TODO BEGIN */
 
-        /* LAB 3 TODO END */
+        /* LAB 3 TODO BEGIN */
+        cap_group = obj_alloc(TYPE_CAP_GROUP, sizeof(struct cap_group));
+        container_of(cap_alloc, struct object, opaque)->refcount++;
+        cap_group_init(cap_group, BASE_OBJECT_NUM, ROOT_PID);
+
         BUG_ON(!cap_group);
-        /* LAB 3 TODO BEGIN */
+        /* LAB 3 TODO END */
 
+        /* LAB 3 TODO BEGIN */
+        /* 1st cap is cap_group itself */
+        slot_id = cap_alloc(cap_group, cap_group, 0);
         /* LAB 3 TODO END */
         BUG_ON(slot_id != CAP_GROUP_OBJ_ID);
+
         /* LAB 3 TODO BEGIN */
+        vmspace = obj_alloc(TYPE_VMSPACE, sizeof(struct vmspace));
 
         /* LAB 3 TODO END */
         BUG_ON(!vmspace);
 
         /* fixed PCID 1 for root process, PCID 0 is not used. */
         /* LAB 3 TODO BEGIN */
-
+        vmspace->pcid = ROOT_PCID;
+        vmspace_init(vmspace);
+        slot_id = cap_alloc(cap_group, vmspace, 0);
         /* LAB 3 TODO END */
+
         BUG_ON(slot_id != VMSPACE_OBJ_ID);
+
         /* Set the cap_group_name (process_name) for easing debugging */
         memset(cap_group->cap_group_name, 0, MAX_GROUP_NAME_LEN);
         if (name_len > MAX_GROUP_NAME_LEN)

@@ -96,8 +96,39 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
                 if (elf->p_headers[i].p_type == PT_LOAD) {
                         seg_sz = elf->p_headers[i].p_memsz;
                         p_vaddr = elf->p_headers[i].p_vaddr;
-                        /* LAB 3 TODO BEGIN */
 
+                        /* LAB 3 TODO BEGIN */
+                        /* every segment worths a pmo */
+                        seg_map_sz = ROUND_UP(p_vaddr + seg_sz, PAGE_SIZE)
+                                     - ROUND_DOWN(p_vaddr, PAGE_SIZE);
+
+                        /* Allocate physical addr region immediately */
+                        r = create_pmo(seg_map_sz, PMO_DATA, cap_group, &pmo);
+
+                        if (r < 0) {
+                                goto out_free_cap;
+                        }
+                        pmo_cap[i] = r;
+
+                        /* attention: pmo start is physical addr! */
+                        vaddr_t start = phys_to_virt(pmo->start);
+                        kdebug("Start vaddr expected: %llx, actual vaddr: %llx\n",
+                               ROUND_DOWN(p_vaddr, PAGE_SIZE),
+                               start);
+                        memset(start, 0, seg_map_sz);
+
+                        start += (p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE));
+                        memcpy(start,
+                               bin + elf->p_headers[i].p_offset,
+                               elf->p_headers[i].p_filesz);
+
+                        /* map physical region to p_vaddr */
+                        flags = PFLAGS2VMRFLAGS(elf->p_headers[i].p_flags);
+                        ret = vmspace_map_range(vmspace,
+                                                ROUND_DOWN(p_vaddr, PAGE_SIZE),
+                                                seg_map_sz,
+                                                flags,
+                                                pmo);
                         /* LAB 3 TODO END */
                         BUG_ON(ret != 0);
                 }
@@ -387,7 +418,11 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
-
+        current_thread->thread_ctx->state = TS_EXIT;
+        current_thread->thread_ctx->thread_exit_state = TE_EXITED;
+        // obj_free(current_thread->cap_group);
+        // obj_free(current_thread->vmspace);
+        // obj_free(current_thread);
         /* LAB 3 TODO END */
         /* Reschedule */
         sched();
