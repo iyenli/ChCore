@@ -98,6 +98,9 @@ void main(paddr_t boot_flag)
     /* Leave the scheduler to do its job */
     sched();
 
+    /* before eret, unlock kernel */
+    unlock_kernel();
+
     /* Context switch to the picked thread */
     eret_to_thread(switch_context());
 
@@ -115,15 +118,22 @@ void secondary_start(void)
     /* LAB 4 TODO BEGIN: Set the cpu_status */
     cpu_status[cpuid] = cpu_run;
     /* LAB 4 TODO END */
+
 #ifdef CHCORE_KERNEL_TEST
     run_test();
 #endif
+
+    /* when get into kernel, lock it */
+    lock_kernel();
 
     /* LAB 4 TODO BEGIN */
     sched_init(&rr);
     /* LAB 4 TODO END */
 
-    lock_kernel();
     sched();
+
+    /* before eret, unlock kernel */
+    unlock_kernel();
+
     eret_to_thread(switch_context());
 }

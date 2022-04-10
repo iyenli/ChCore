@@ -42,9 +42,33 @@ wait_for_bss_clear:
 
 完成本部分后，可以看到四个CPU 核Active的输出，可以看到，stdout是乱序的。
 
-![image-20220409212855975](https://s2.loli.net/2022/04/09/AmWNbXon7uPvRlB.png)
+<img src="https://s2.loli.net/2022/04/09/AmWNbXon7uPvRlB.png" alt="image-20220409212855975" style="zoom:67%;" />
 
 (和前面在原生Linux完成不同，本实验在WSL2完成。)
 
 ## 4
+
+
+
+## 5
+
+不需要，因为`unlock`的时机是退出内核态之前，此时该保存的寄存器已经保存好了，而退出内核前会恢复进入内核态时保存的寄存器，通用寄存器本来也将被破坏。因此`unlock`没有必要保存和恢复寄存器。
+
+## 6
+
+因为IDLE线程在等待队列非空时不应该被调度，而加入到队列中由于FIFO策略总会被调度到的。这可能会浪费CPU时间片，而且不符合IDLE调度时机的设定。
+
+## 7
+
+面向测试用例编程，设定满足要求的异常情况返回值。
+
+## 8
+
+## 9
+
+这里处理了特别久的Bug. 检查了创建thread的系统调用链，在线程sched返回并Exit后会出错。主要Bug在于rr_sched应当使用`switch_to_thread`，自己写相关逻辑漏了thread->prev 的赋值。然后Lab3中写的Exit系统调用语义和sched不匹配，导致无法正确修改Exit的状态。修改后出现了死锁问题。找了一段时间，暂时删去了el0_syscall中的kernel锁。
+
+## 10
+
+
 

@@ -90,8 +90,7 @@ int is_locked(struct lock* l)
     int ret = 0;
     struct lock_impl* lock = (struct lock_impl*)l;
     /* LAB 4 TODO BEGIN */
-    // TODO: What is is locked here?
-    ret = (try_lock(lock) == 0);
+    ret = (lock->next > lock->owner);
     /* LAB 4 TODO END */
     return ret;
 }
