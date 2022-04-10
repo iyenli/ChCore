@@ -55,14 +55,18 @@ int rr_sched_enqueue(struct thread* thread)
     if (thread->thread_ctx->type == TYPE_IDLE) {
         return 0;
     }
-    //     if (thread->thread_ctx->affinity == NO_AFF) {
-    list_add(&(thread->ready_queue_node), &(rr_ready_queue_meta[smp_get_cpu_id()].queue_head));
-    rr_ready_queue_meta[smp_get_cpu_id()].queue_len++;
-    thread->thread_ctx->state = TS_READY;
-    thread->thread_ctx->cpuid = smp_get_cpu_id();
-    thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
 
-    //     }
+    u32 cpu_id = thread->thread_ctx->affinity == NO_AFF ? smp_get_cpu_id() : thread->thread_ctx->affinity;
+    if (cpu_id < 0 || cpu_id >= PLAT_CPU_NUM) {
+        // kinfo("cpu id: %d", cpu_id);
+        return 1;
+    }
+
+    list_add(&(thread->ready_queue_node), &(rr_ready_queue_meta[cpu_id].queue_head));
+    rr_ready_queue_meta[cpu_id].queue_len++;
+    thread->thread_ctx->state = TS_READY;
+    thread->thread_ctx->cpuid = cpu_id;
+    thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
     /* LAB 4 TODO END */
     return 0;
 }
@@ -76,11 +80,7 @@ int rr_sched_enqueue(struct thread* thread)
 int rr_sched_dequeue(struct thread* thread)
 {
     /* LAB 4 TODO BEGIN */
-    if (thread == NULL || thread->thread_ctx == NULL) {
-        return 1;
-    }
-
-    if (thread->thread_ctx->type == TYPE_IDLE || thread->thread_ctx->state != TS_READY) {
+    if (thread == NULL || thread->thread_ctx == NULL || thread->thread_ctx->type == TYPE_IDLE || thread->thread_ctx->state != TS_READY) {
         return 1;
     }
 
@@ -145,9 +145,12 @@ static inline void rr_sched_refill_budget(struct thread* target, u32 budget)
 int rr_sched(void)
 {
     /* LAB 4 TODO BEGIN */
-    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
+    // clang-format off
+    if (current_thread != NULL && current_thread->thread_ctx != NULL &&
+     current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
         return 0;
-    }
+    } // unlike too long line!
+    // clang-format on
 
     if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->type != TYPE_IDLE) {
         if (current_thread->thread_ctx->thread_exit_state == TE_EXITING) {
@@ -160,6 +163,7 @@ int rr_sched(void)
     }
 
     struct thread* to_sched = rr_sched_choose_thread();
+    to_sched->thread_ctx->affinity = smp_get_cpu_id();
     switch_to_thread(to_sched);
 
     /* LAB 4 TODO END */
