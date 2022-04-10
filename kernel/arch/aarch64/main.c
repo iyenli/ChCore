@@ -80,6 +80,9 @@ void main(paddr_t boot_flag)
     sched_init(&rr);
     kinfo("[ChCore] sched init finished\n");
 
+    timer_init();
+    kinfo("[ChCore] timer init finished\n");
+
     /* Other cores are busy looping on the addr, wake up those cores */
     lock_kernel();
     enable_smp_cores(boot_flag);
@@ -128,6 +131,7 @@ void secondary_start(void)
 
     /* LAB 4 TODO BEGIN */
     sched_init(&rr);
+    timer_init();
     /* LAB 4 TODO END */
 
     sched();

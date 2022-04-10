@@ -152,6 +152,15 @@ u64 switch_context(void)
 void sched_handle_timer_irq(void)
 {
     /* LAB 4 TODO BEGIN */
+    if (current_thread == NULL || current_thread->thread_ctx == NULL || current_thread->thread_ctx->sc == NULL) {
+        return;
+    }
+    if (current_thread->thread_ctx->sc->budget == 0) {
+        return;
+    }
+    if ((--current_thread->thread_ctx->sc->budget) == 0) {
+        sched();
+    }
 
     /* LAB 4 TODO END */
 }
@@ -163,7 +172,11 @@ void sys_yield(void)
     /* LAB 4 TODO BEGIN */
 
     current_thread->thread_ctx->state = TS_WAITING;
+
+    current_thread->thread_ctx->sc->budget = 0;
     sched();
+    current_thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
+
     eret_to_thread(switch_context());
     /* LAB 4 TODO END */
     BUG("Should not return!\n");

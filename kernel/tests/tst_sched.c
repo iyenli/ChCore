@@ -1,3 +1,4 @@
+// clang-format off
 #include <common/lock.h>
 #include <common/kprint.h>
 #include <arch/machine/smp.h>
