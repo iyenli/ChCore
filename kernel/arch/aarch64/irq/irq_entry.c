@@ -39,8 +39,9 @@ void handle_entry_c(int type, u64 esr, u64 address)
 {
     /* Acquire the big kernel lock, if the exception is not from kernel */
     /* LAB 4 TODO BEGIN */
-    if (type >= SYNC_EL0_64
-        || current_thread->thread_ctx->type == TYPE_IDLE) {
+    bool need_lock = type >= SYNC_EL0_64
+        || current_thread->thread_ctx->type == TYPE_IDLE;
+    if (need_lock) {
         lock_kernel();
     }
     /* LAB 4 TODO END */
@@ -57,9 +58,6 @@ void handle_entry_c(int type, u64 esr, u64 address)
 
     /* Currently, ChCore only handles a part of IRQs */
     if (type < SYNC_EL0_64) {
-        if (current_thread->thread_ctx->type == TYPE_IDLE) {
-            unlock_kernel();
-        }
         if (esr_ec != ESR_EL1_EC_DABT_CEL) {
             kinfo("%s: irq type is %d\n", __func__, type);
             BUG_ON(1);
@@ -73,7 +71,7 @@ void handle_entry_c(int type, u64 esr, u64 address)
         break;
     case ESR_EL1_EC_WFI_WFE:
         kdebug("Trapped WFI or WFE instruction execution\n");
-        unlock_kernel();
+        // unlock_kernel();
         return;
     case ESR_EL1_EC_ENFP:
         kdebug("Access to SVE, Advanced SIMD, or floating-point functionality\n");
@@ -96,7 +94,6 @@ void handle_entry_c(int type, u64 esr, u64 address)
          * dynamic loading can trigger faults here.
          */
         do_page_fault(esr, address);
-        unlock_kernel();
         return;
     case ESR_EL1_EC_IABT_CEL:
         kinfo("Instruction Abort from current Exception level\n");
@@ -110,12 +107,10 @@ void handle_entry_c(int type, u64 esr, u64 address)
          * We only consider page faults for now.
          */
         do_page_fault(esr, address);
-        unlock_kernel();
         return;
     case ESR_EL1_EC_DABT_CEL:
         kdebug("Data Abort from a current Exception level\n");
         do_page_fault(esr, address);
-        unlock_kernel();
         return;
     case ESR_EL1_EC_SP_ALIGN:
         kdebug("SP alignment fault exception\n");
@@ -141,7 +136,6 @@ void handle_entry_c(int type, u64 esr, u64 address)
         address,
         esr_ec);
 
-    unlock_kernel();
     BUG_ON(1);
 }
 
@@ -164,10 +158,6 @@ void handle_irq(int type)
     plat_handle_irq();
     sched();
 
-    if (type >= SYNC_EL0_64
-        || current_thread->thread_ctx->type == TYPE_IDLE) {
-        unlock_kernel();
-    }
     eret_to_thread(switch_context());
 }
 

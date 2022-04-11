@@ -65,6 +65,7 @@ int rr_sched_enqueue(struct thread* thread)
     list_add(&(thread->ready_queue_node), &(rr_ready_queue_meta[cpu_id].queue_head));
     rr_ready_queue_meta[cpu_id].queue_len++;
     thread->thread_ctx->state = TS_READY;
+    thread->thread_ctx->thread_exit_state = TE_RUNNING;
     thread->thread_ctx->cpuid = cpu_id;
     thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
     /* LAB 4 TODO END */
@@ -146,16 +147,23 @@ int rr_sched(void)
 {
     /* LAB 4 TODO BEGIN */
     // clang-format off
-    if (current_thread != NULL && current_thread->thread_ctx != NULL &&
-     current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
+    if (current_thread != NULL && current_thread->thread_ctx != NULL && 
+         current_thread->thread_ctx->thread_exit_state != TE_EXITING &&
+        current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
         return 0;
     } // unlike too long line!
     // clang-format on
 
+    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
+        kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
+    }
+
     if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->type != TYPE_IDLE) {
         if (current_thread->thread_ctx->thread_exit_state == TE_EXITING) {
+            // kinfo("Exit a thread\n");
             current_thread->thread_ctx->thread_exit_state = TE_EXITED;
             current_thread->thread_ctx->state = TS_EXIT;
+            current_thread->thread_ctx->sc->budget = 0;
         } else {
             rr_sched_refill_budget(current_thread, DEFAULT_BUDGET);
             rr_sched_enqueue(current_thread);
@@ -163,6 +171,7 @@ int rr_sched(void)
     }
 
     struct thread* to_sched = rr_sched_choose_thread();
+    BUG_ON(to_sched->thread_ctx->affinity != NO_AFF && to_sched->thread_ctx->affinity != smp_get_cpu_id());
     to_sched->thread_ctx->affinity = smp_get_cpu_id();
     switch_to_thread(to_sched);
 

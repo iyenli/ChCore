@@ -156,7 +156,7 @@ void sched_handle_timer_irq(void)
         return;
     }
     if (current_thread->thread_ctx->sc->budget == 0) {
-        return;
+        return; // according to test case, it's illeagal input :)
     }
     if ((--current_thread->thread_ctx->sc->budget) == 0) {
         sched();
@@ -170,15 +170,11 @@ void sched_handle_timer_irq(void)
 void sys_yield(void)
 {
     /* LAB 4 TODO BEGIN */
-
-    current_thread->thread_ctx->state = TS_WAITING;
-
     current_thread->thread_ctx->sc->budget = 0;
     sched();
-    current_thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
-
     eret_to_thread(switch_context());
     /* LAB 4 TODO END */
+
     BUG("Should not return!\n");
 }
 

@@ -81,7 +81,7 @@ void unlock(struct lock* l)
     smp_mb(); /* load, store -> store barrier may use stlr here */
     /* LAB 4: set the correct lock->owner */
     /* LAB 4 TODO BEGIN */
-    atomic_fetch_add_32(&(lock->owner), 1);
+    lock->owner += 1;
     /* LAB 4 TODO END */
 }
 

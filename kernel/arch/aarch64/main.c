@@ -86,24 +86,21 @@ void main(paddr_t boot_flag)
     /* Other cores are busy looping on the addr, wake up those cores */
     lock_kernel();
     enable_smp_cores(boot_flag);
-    kinfo("[ChCore] boot multicore finished\n");
     unlock_kernel();
+    kinfo("[ChCore] boot multicore finished\n");
 
 #ifdef CHCORE_KERNEL_TEST
     run_test();
 #endif
 
-    lock_kernel();
     /* Create initial thread here, which use the `init.bin` */
     create_root_thread();
     kinfo("[ChCore] create initial thread done on %d\n", smp_get_cpu_id());
 
+    lock_kernel();
+
     /* Leave the scheduler to do its job */
     sched();
-
-    /* before eret, unlock kernel */
-    unlock_kernel();
-
     /* Context switch to the picked thread */
     eret_to_thread(switch_context());
 
@@ -117,6 +114,7 @@ void secondary_start(void)
 
     arch_interrupt_init_per_cpu();
     pmu_init();
+    timer_init();
 
     /* LAB 4 TODO BEGIN: Set the cpu_status */
     cpu_status[cpuid] = cpu_run;
@@ -126,18 +124,13 @@ void secondary_start(void)
     run_test();
 #endif
 
-    /* when get into kernel, lock it */
-    lock_kernel();
-
     /* LAB 4 TODO BEGIN */
     sched_init(&rr);
-    timer_init();
     /* LAB 4 TODO END */
 
+    /* when get into kernel, lock it */
+    lock_kernel();
     sched();
-
-    /* before eret, unlock kernel */
-    unlock_kernel();
 
     eret_to_thread(switch_context());
 }

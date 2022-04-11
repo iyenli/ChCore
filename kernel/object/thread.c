@@ -423,6 +423,7 @@ void sys_thread_exit(void)
     // obj_free(current_thread);
     /* LAB 3 TODO END */
     /* Reschedule */
+    /* has acquired lock before entering exit! */
     sched();
     eret_to_thread(switch_context());
 }
@@ -432,6 +433,7 @@ void sys_thread_exit(void)
  * Finish the sys_set_affinity
  * You do not need to schedule out current thread immediately,
  * as it is the duty of sys_yield()
+ * It's system call!
  */
 int sys_set_affinity(u64 thread_cap, s32 aff)
 {
@@ -457,8 +459,28 @@ int sys_set_affinity(u64 thread_cap, s32 aff)
     }
 
     /* LAB 4 TODO BEGIN */
-    thread->thread_ctx->affinity = aff;
+    /* be aware of kernel lock:) */
+    if (thread->thread_ctx->thread_exit_state != TE_RUNNING) {
+        goto out;
+    }
+
+    if (thread->thread_ctx->cpuid != aff) {
+        // acquiring kernel lock before system call.
+        if (thread->thread_ctx->state == TS_RUNNING) {
+            thread->thread_ctx->affinity = aff;
+        } else if (thread->thread_ctx->state == TS_READY) {
+            sched_dequeue(thread);
+            thread->thread_ctx->affinity = aff;
+            sched_enqueue(thread);
+        } else {
+            kinfo("Wierd state when set aff: %d\n", thread->thread_ctx->state);
+            goto out;
+        }
+    } else {
+        thread->thread_ctx->affinity = aff;
+    }
     /* LAB 4 TODO END */
+
     if (thread_cap != -1)
         obj_put((void*)thread);
 out:

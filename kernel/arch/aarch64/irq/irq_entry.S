@@ -170,6 +170,7 @@ sync_el1h:
 	/* LAB 3 TODO BEGIN */
 	bl handle_entry_c
 	/* LAB 3 TODO END */
+	
 	exception_exit /* Lab4: Do not unlock! */
 
 sync_el0_64:
@@ -185,6 +186,7 @@ sync_el0_64:
 	mrs	x2, elr_el1
 	bl	handle_entry_c
 
+	bl unlock_kernel
 	exception_exit
 
 el0_syscall:
@@ -200,7 +202,7 @@ el0_syscall:
 	stp	x14, x15, [sp, #16 * 7]
 	
 	/* LAB 4 TODO BEGIN */
-
+	bl lock_kernel
 	/* LAB 4 TODO END */
 
 	ldp	x0, x1, [sp, #16 * 0]
@@ -221,6 +223,7 @@ el0_syscall:
 	/* Ret from syscall */
 	str	x0, [sp]
 
+	bl unlock_kernel
 	exception_exit
 
 
@@ -244,5 +247,6 @@ BEGIN_FUNC(__eret_to_thread)
 	mov	sp, x0
 	dmb ish
 
+	bl unlock_kernel
 	exception_exit
 END_FUNC(__eret_to_thread)
