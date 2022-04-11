@@ -305,7 +305,7 @@ int launch_process(struct launch_process_args* lp_args)
     /* LAB 4 TODO BEGIN: fill pmo_map_requests */
     pmo_map_requests[0].pmo_cap = main_stack_cap;
     pmo_map_requests[0].addr = MAIN_THREAD_STACK_BASE;
-    pmo_map_requests[0].perm = (VM_READ | VM_WRITE);
+    pmo_map_requests[0].perm = (VM_READ | VM_WRITE | VM_EXEC);
     pmo_map_requests[0].free_cap = 1;
 
     /* LAB 4 TODO END */
@@ -336,7 +336,8 @@ int launch_process(struct launch_process_args* lp_args)
      */
     args.cap_group_cap = new_process_cap;
     /* LAB 4 TODO BEGIN: set the stack for main thread */
-    args.stack = main_stack_cap;
+    /* !@#$%^& It could be stack addr... I mean I write cap and debug for long... */
+    args.stack = stack_top - 0x1000;
     /* LAB 4 TODO END */
     args.pc = pc;
     args.arg = (u64)NULL;

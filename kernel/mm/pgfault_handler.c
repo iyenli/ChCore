@@ -254,7 +254,6 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          */
                         /* LAB 3 TODO BEGIN */
 
-                        /* TODO: Make the lru node to the front of lru queue */
 #if LRU_TEST
                         // has allocated real memory, just map
                         pa = ROUND_DOWN(pa, PAGE_SIZE);

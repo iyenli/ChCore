@@ -68,6 +68,7 @@ int rr_sched_enqueue(struct thread* thread)
     thread->thread_ctx->thread_exit_state = TE_RUNNING;
     thread->thread_ctx->cpuid = cpu_id;
     thread->thread_ctx->sc->budget = DEFAULT_BUDGET;
+
     /* LAB 4 TODO END */
     return 0;
 }
