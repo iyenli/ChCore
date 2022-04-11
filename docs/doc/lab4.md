@@ -72,3 +72,5 @@ wait_for_bss_clear:
 
 Debug心得：和之前写的一个数据库Lab一样，一开始什么锁也别加，先解决非并发性的Bug. 不然死锁可能会导致这些非并发Bug无法暴露，最后再解决锁问题。
 
+发现了Lab 3的Bug, 但lab3似乎没有测出来。在Lab 3-T2的debug心得中写到弄错了TYPE_VMSPACE和VMSPACE_OBJ_ID这两个宏，（其实TYPE_CAP_GROUP和CAP_GROUP_OBJ_ID也弄错了，但他们是一样的），然后Fix了。但是在sys create cap group中的并没有fix. 导致找了非常久为什么无法正确完成。
+
