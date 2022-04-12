@@ -52,6 +52,10 @@ int rr_sched_enqueue(struct thread* thread)
         return 1;
     }
 
+    if (thread->thread_ctx->state == TS_WAITING) {
+        return 1; // waiting for shadow return, should not enqueue
+    }
+
     if (thread->thread_ctx->type == TYPE_IDLE) {
         return 0;
     }
