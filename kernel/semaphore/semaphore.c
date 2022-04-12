@@ -1,14 +1,14 @@
-#include <semaphore/semaphore.h>
-#include <sched/sched.h>
+#include <irq/irq.h>
 #include <object/thread.h>
 #include <sched/context.h>
-#include <irq/irq.h>
+#include <sched/sched.h>
+#include <semaphore/semaphore.h>
 
-void init_sem(struct semaphore *sem)
+void init_sem(struct semaphore* sem)
 {
-        sem->sem_count = 0;
-        sem->waiting_threads_count = 0;
-        init_list_head(&sem->waiting_threads);
+    sem->sem_count = 0;
+    sem->waiting_threads_count = 0;
+    init_list_head(&sem->waiting_threads);
 }
 
 /*
@@ -19,13 +19,34 @@ void init_sem(struct semaphore *sem)
  * and set the return value of the current thread.
  * Besides, you should `obj_put` the sem before eret to the new thread.
  */
-s32 wait_sem(struct semaphore *sem, bool is_block)
+s32 wait_sem(struct semaphore* sem, bool is_block)
 {
-        s32 ret = 0;
-        /* LAB 4 TODO BEGIN */
+    s32 ret = 0;
+    /* LAB 4 TODO BEGIN */
+    if (sem->sem_count == 0) {
+        if (is_block) {
+            sem->waiting_threads_count++;
+            list_add(&current_thread->sem_queue_node, &sem->waiting_threads);
 
-        /* LAB 4 TODO END */
-        return ret;
+            current_thread->thread_ctx->state = TS_WAITING;
+            current_thread->thread_ctx->sc->budget = 0;
+            arch_set_thread_return(current_thread, 0);
+
+            obj_put(sem);
+            sched();
+            eret_to_thread(switch_context());
+
+            BUG("Control flow never reaches here.\n");
+        } else {
+            kinfo("Not block and failed sem wait.\n");
+            return -EAGAIN;
+        }
+    } else {
+        sem->sem_count--;
+    }
+
+    /* LAB 4 TODO END */
+    return ret;
 }
 
 /*
@@ -35,67 +56,76 @@ s32 wait_sem(struct semaphore *sem, bool is_block)
  * Remember to delete the thread from the list using `list_del`.
  * Enqueue it to the ready queue rather than directly switch to it.
  */
-s32 signal_sem(struct semaphore *sem)
+s32 signal_sem(struct semaphore* sem)
 {
-        /* LAB 4 TODO BEGIN */
-
-        /* LAB 4 TODO END */
+    /* LAB 4 TODO BEGIN */
+    if (sem->waiting_threads_count == 0) {
+        sem->sem_count++;
         return 0;
+    } else {
+        sem->waiting_threads_count--;
+        struct thread* to_sched = list_entry(sem->waiting_threads.prev, struct thread, sem_queue_node);
+        list_del(&to_sched->sem_queue_node);
+        to_sched->thread_ctx->state = TS_INTER;
+        sched_enqueue(to_sched);
+    }
+    /* LAB 4 TODO END */
+    return 0;
 }
 
 s32 sys_create_sem(void)
 {
-        struct semaphore *sem = NULL;
-        int sem_cap = 0;
-        int ret = 0;
+    struct semaphore* sem = NULL;
+    int sem_cap = 0;
+    int ret = 0;
 
-        sem = obj_alloc(TYPE_SEMAPHORE, sizeof(*sem));
-        if (!sem) {
-                ret = -ENOMEM;
-                goto out_fail;
-        }
-        init_sem(sem);
+    sem = obj_alloc(TYPE_SEMAPHORE, sizeof(*sem));
+    if (!sem) {
+        ret = -ENOMEM;
+        goto out_fail;
+    }
+    init_sem(sem);
 
-        sem_cap = cap_alloc(current_cap_group, sem, 0);
-        if (sem_cap < 0) {
-                ret = sem_cap;
-                goto out_free_obj;
-        }
+    sem_cap = cap_alloc(current_cap_group, sem, 0);
+    if (sem_cap < 0) {
+        ret = sem_cap;
+        goto out_free_obj;
+    }
 
-        return sem_cap;
+    return sem_cap;
 out_free_obj:
-        obj_free(sem);
+    obj_free(sem);
 out_fail:
-        return ret;
+    return ret;
 }
 
 s32 sys_wait_sem(u32 sem_cap, bool is_block)
 {
-        struct semaphore *sem = NULL;
-        int ret;
+    struct semaphore* sem = NULL;
+    int ret;
 
-        sem = obj_get(current_thread->cap_group, sem_cap, TYPE_SEMAPHORE);
-        if (!sem) {
-                ret = -ECAPBILITY;
-                goto out;
-        }
-        ret = wait_sem(sem, is_block);
-        obj_put(sem);
+    sem = obj_get(current_thread->cap_group, sem_cap, TYPE_SEMAPHORE);
+    if (!sem) {
+        ret = -ECAPBILITY;
+        goto out;
+    }
+    ret = wait_sem(sem, is_block);
+    obj_put(sem);
 out:
-        return ret;
+    return ret;
 }
 
 s32 sys_signal_sem(u32 sem_cap)
 {
-        struct semaphore *sem = NULL;
-        int ret;
-        sem = obj_get(current_thread->cap_group, sem_cap, TYPE_SEMAPHORE);
-        if (!sem) {
-                ret = -ECAPBILITY;
-                goto out;
-        }
-        ret = signal_sem(sem);
-        obj_put(sem);
+    struct semaphore* sem = NULL;
+    int ret;
+    sem = obj_get(current_thread->cap_group, sem_cap, TYPE_SEMAPHORE);
+    if (!sem) {
+        ret = -ECAPBILITY;
+        goto out;
+    }
+    ret = signal_sem(sem);
+    obj_put(sem);
 out:
-        return ret;
+    return ret;
 }
