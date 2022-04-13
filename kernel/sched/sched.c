@@ -153,6 +153,7 @@ void sched_handle_timer_irq(void)
 {
     /* LAB 4 TODO BEGIN */
     if (current_thread == NULL || current_thread->thread_ctx == NULL || current_thread->thread_ctx->sc == NULL) {
+        sched();
         return;
     }
     if (current_thread->thread_ctx->sc->budget == 0) {
