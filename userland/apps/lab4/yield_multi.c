@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
                 if (child_thread_cap < 0)
                         printf("Create thread failed, return %d\n",
                                child_thread_cap);
+                               
                 __chcore_sys_set_affinity(child_thread_cap, thread_i % 4);
         }
 

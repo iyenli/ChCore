@@ -20,8 +20,8 @@
  * The max allocated size (continous physical memory size) is
  * 2^(BUDDY_MAX_ORDER - 1) * 4K, i.e., 16M.
  */
-#define BUDDY_PAGE_SIZE (0x1000)
-#define BUDDY_MAX_ORDER (14UL)
+#define BUDDY_PAGE_SIZE (0x1000) // 4 KB
+#define BUDDY_MAX_ORDER (14UL) // max = 2 ^ 13 = 8192, max is 32 MB here
 
 /* Forward declaration */
 struct phys_mem_pool;
@@ -49,7 +49,7 @@ struct free_list {
 struct phys_mem_pool {
         /*
          * The start virtual address (for used in kernel) of
-         * this physical memory pool.
+         * this physical memory pool. REAL PAGE START ADDR!
          */
         u64 pool_start_addr;
         u64 pool_mem_size;

@@ -33,3 +33,4 @@ static inline bool is_user_addr_range(vaddr_t vaddr, size_t len)
 {
         return (vaddr + len >= vaddr) && is_user_addr(vaddr + len);
 }
+void remap(void);

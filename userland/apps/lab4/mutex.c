@@ -13,25 +13,28 @@
 #include <chcore/internal/raw_syscall.h>
 #include <sync/spin.h>
 #include "mutex.h"
+#include <chcore/internal/raw_syscall.h>
 #include <stdio.h>
+#include <sync/spin.h>
 
-void lock_init(struct lock *lock)
+void lock_init(struct lock* lock)
 {
-        /* LAB 4 TODO BEGIN */
-
-        /* LAB 4 TODO END */
+    /* LAB 4 TODO BEGIN */
+    lock->lock_sem = __chcore_sys_create_sem();
+    __chcore_sys_signal_sem(lock->lock_sem);
+    /* LAB 4 TODO END */
 }
 
-void lock(struct lock *lock)
+void lock(struct lock* lock)
 {
-        /* LAB 4 TODO BEGIN */
-
-        /* LAB 4 TODO END */
+    /* LAB 4 TODO BEGIN */
+    __chcore_sys_wait_sem(lock->lock_sem, 1);
+    /* LAB 4 TODO END */
 }
 
-void unlock(struct lock *lock)
+void unlock(struct lock* lock)
 {
-        /* LAB 4 TODO BEGIN */
-
-        /* LAB 4 TODO END */
+    /* LAB 4 TODO BEGIN */
+    __chcore_sys_signal_sem(lock->lock_sem);
+    /* LAB 4 TODO END */
 }
