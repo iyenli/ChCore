@@ -155,21 +155,7 @@ static int tfs_mknod(struct inode* dir, const char* name, size_t len, int mkdir)
     struct inode* new_node = mkdir ? new_dir() : new_reg();
     new_node->size = len;
 
-    // struct string name_;
-    // init_string(&name_, name, strlen(name));
-
-    // struct hlist_node hlist_node_;
-    // init_hlist_node(&(hlist_node_));
-
-    // struct dentry dentry_ = {
-    //     .name = name_,
-    //     .inode = new_node,
-    //     .refcnt = 1,
-    //     .node = hlist_node_
-    // };
     dent = new_dent(new_node, name, strlen(name));
-
-    // TODO: Check correctness, in htable = 1024 is correct.
     htable_add(&(dir->dentries), dent->name.hash, &(dent->node));
     dir->size++;
 
@@ -249,19 +235,20 @@ int tfs_namex(struct inode** dirat, const char** name, int mkdir_p)
         while (**name && **name == '/') {
             ++(*name);
         }
+
+        // `/tmp/` type: tmp still set in dirat, and *name = '\0'
         if (**name == '\0') {
-            // `/tmp/` type tmp still set in dirat, and *name = '\0'
             *name = '\0';
             return 0;
         }
 
         if ((*dirat)->type != FS_DIR) {
-            WARN("Not a directory in namex process\n");
+            WARN("It should be a directory in namex process.\n");
             return -ENOTDIR;
         }
 
-        i = 0;
         /* collect file name in buff */
+        i = 0;
         while (**name && **name != '/') {
             buff[i++] = **name;
             ++(*name);
@@ -269,22 +256,20 @@ int tfs_namex(struct inode** dirat, const char** name, int mkdir_p)
         buff[i] = '\0';
 
         // find in dirat and update it
-        info("Search buff: %s\n", buff);
         dent = tfs_lookup((*dirat), buff, i);
         if (dent == NULL) {
-            if (mkdir_p) { // create intermediate dir
+            if (mkdir_p && **name) {
+                // create intermediate dir
+                err = tfs_mkdir((*dirat), buff, strlen(buff));
+                BUG_ON(err < 0);
+                dent = tfs_lookup((*dirat), buff, strlen(buff));
+                BUG_ON(dent == NULL);
 
-                if (**name) {
-                    err = tfs_mkdir((*dirat), buff, strlen(buff));
-                    BUG_ON(err < 0);
-                    dent = tfs_lookup((*dirat), buff, strlen(buff));
-                    BUG_ON(dent == NULL);
-                } else {
-                    return 0;
-                }
-
+            } else if (mkdir_p) {
+                // dirat is the parent
+                return 0;
             } else {
-                WARN("not set mkdir but lookup a not-exist file.\n");
+                WARN("Not set mkdir but lookup a not-exist file.\n");
                 return -ENONET;
             }
         }
@@ -300,6 +285,7 @@ int tfs_namex(struct inode** dirat, const char** name, int mkdir_p)
     /* LAB 5 TODO END */
 
     /* we will never reach here? */
+    BUG("Control flow never reaches here.\n");
     return 0;
 }
 
@@ -460,24 +446,27 @@ int tfs_load_image(const char* start)
         dirat = tmpfs_root; // extract from root dir
         leaf = f->name; // Aware of mofication in namex:)
         err = tfs_namex(&dirat, &leaf, true);
+
         BUG_ON(err < 0);
         BUG_ON(dirat->type != FS_DIR);
 
         dent = tfs_lookup(dirat, f->name, strlen(f->name));
         if (dent == NULL) {
-            info("fname: %s\n", f->name);
-            BUG_ON(dirat != tmpfs_root);
             err = tfs_creat(dirat, f->name, strlen(f->name));
+
             BUG_ON(err < 0);
             dent = tfs_lookup(dirat, f->name, strlen(f->name));
         }
-        BUG_ON(dent == NULL);
 
-        write_count = tfs_file_write(dent->inode, 0, f->data, f->header.c_filesize);
+        BUG_ON(dent == NULL);
+        len = f->header.c_filesize;
+        write_count = tfs_file_write(dent->inode, 0, f->data, len);
+
         if (write_count != f->header.c_filesize) {
-            WARN("Load writing failed\n");
+            WARN("Load writing failed.\n");
             return -ENOSPC;
         }
+
         /* LAB 5 TODO END */
     }
 
