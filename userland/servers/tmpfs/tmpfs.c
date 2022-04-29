@@ -267,9 +267,11 @@ int tfs_namex(struct inode** dirat, const char** name, int mkdir_p)
 
             } else if (mkdir_p) {
                 // dirat is the parent
-                return 0;
+                for (i = strlen(buff); i > 0; --i) {
+                    --(*name);
+                }
+                return -ENONET;
             } else {
-                WARN("Not set mkdir but lookup a not-exist file.\n");
                 return -ENONET;
             }
         }
@@ -447,7 +449,6 @@ int tfs_load_image(const char* start)
         leaf = f->name; // Aware of mofication in namex:)
         err = tfs_namex(&dirat, &leaf, true);
 
-        BUG_ON(err < 0);
         BUG_ON(dirat->type != FS_DIR);
 
         dent = tfs_lookup(dirat, f->name, strlen(f->name));
