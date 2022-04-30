@@ -172,7 +172,7 @@ int rr_sched(void)
 
     if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING
         && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
-        kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
+        // kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
     }
     // clang-format on
 
