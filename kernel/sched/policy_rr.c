@@ -169,11 +169,12 @@ int rr_sched(void)
         current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
         return 0;
     } // unlike too long line!
-    // clang-format on
 
-    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
+    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING
+        && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
         kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
     }
+    // clang-format on
 
     if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->type != TYPE_IDLE) {
         if (current_thread->thread_ctx->thread_exit_state == TE_EXITING) {

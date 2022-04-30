@@ -13,12 +13,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d383e79e-62b0-4667-8fe4-e5855ddf23d3" name="变更" comment="">
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-environment.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-environment.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/doc/lab2.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/doc/lab2.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kernel/arch/aarch64/mm/page_table.c" beforeDir="false" afterPath="$PROJECT_DIR$/kernel/arch/aarch64/mm/page_table.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/doc/lab5.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/doc/lab5.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/kernel/ipc/connection.c" beforeDir="false" afterPath="$PROJECT_DIR$/kernel/ipc/connection.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libchcore/src/ipc/ipc.c" beforeDir="false" afterPath="$PROJECT_DIR$/libchcore/src/ipc/ipc.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/userland/servers/shell/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/userland/servers/shell/main.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/userland/servers/shell/shell.c" beforeDir="false" afterPath="$PROJECT_DIR$/userland/servers/shell/shell.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/userland/servers/tmpfs/tmpfs.c" beforeDir="false" afterPath="$PROJECT_DIR$/userland/servers/tmpfs/tmpfs.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/userland/servers/tmpfs/tmpfs_test.c" beforeDir="false" afterPath="$PROJECT_DIR$/userland/servers/tmpfs/tmpfs_test.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,9 +60,9 @@
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
   <component name="RunManager">
-    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
-        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
     <configuration name="make" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile">
@@ -82,6 +84,7 @@
       <workItem from="1646138657730" duration="1544000" />
       <workItem from="1646227637850" duration="601000" />
       <workItem from="1648187533456" duration="133000" />
+      <workItem from="1651242375959" duration="62000" />
     </task>
     <servers />
   </component>
@@ -90,5 +93,16 @@
   </component>
   <component name="UnknownFeatures">
     <option featureType="com.intellij.fileTypeFactory" implementationName="*.s" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/userland/servers/shell/shell.c</url>
+          <line>221</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

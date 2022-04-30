@@ -146,9 +146,9 @@ static int create_connection(struct thread* source, struct thread* target,
     /* LAB 4 TODO BEGIN */
     // kinfo("Server buf base addr: %lx, Client buf base addr: %lx\n", server_buf_base, client_buf_base);
     ret = vmspace_map_range(target->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-    ret = vmspace_map_range(target->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
+    // ret = vmspace_map_range(target->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
     ret = vmspace_map_range(source->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-    ret = vmspace_map_range(source->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
+    // ret = vmspace_map_range(source->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
     /* LAB 4 TODO END */
 
     conn->buf.client_user_addr
@@ -586,7 +586,7 @@ u64 sys_ipc_call(u32 conn_cap, struct ipc_msg* ipc_msg, u64 cap_num)
      * Then what value should the arg be?
      * */
     /* LAB 4 TODO BEGIN: set arg */
-    arg = (u64)ipc_msg;
+    arg = (u64)ipc_msg - conn->buf.client_user_addr + conn->buf.server_user_addr;
     /* LAB 4 TODO END */
 
     thread_migrate_to_server(conn, arg);

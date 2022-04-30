@@ -173,6 +173,7 @@ static int __dirent_filler(void** dirpp, void* end, char* name, unsigned long lo
     dirp->d_reclen = len;
     dirp->d_type = type;
     strcpy(dirp->d_name, name);
+    
     *dirpp = p;
     return len;
 }

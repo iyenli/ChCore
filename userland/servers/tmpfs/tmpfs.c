@@ -499,7 +499,6 @@ struct inode* tfs_open_path(const char* path)
     const char* leaf = path;
     struct dentry* dent;
     int err;
-
     if (*path == '/' && !*(path + 1))
         return tmpfs_root;
 

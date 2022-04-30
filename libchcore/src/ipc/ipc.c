@@ -10,8 +10,6 @@
  * See the Mulan PSL v1 for more details.
  */
 
-#include <chcore/ipc.h>
-#include <chcore/thread.h>
 #include <chcore/assert.h>
 #include <chcore/internal/raw_syscall.h>
 #include <chcore/ipc.h>
@@ -57,8 +55,9 @@ struct ipc_struct* ipc_register_client(int server_thread_cap)
         return NULL;
 
     /* LAB 4 TODO BEGIN: fill vm_config according to client_id */
-    vm_config.buf_base_addr = (client_id) * (CLIENT_BUF_SIZE) + CLIENT_BUF_BASE;
+    vm_config.buf_base_addr = ((client_id) * (CLIENT_BUF_SIZE)) + CLIENT_BUF_BASE;
     vm_config.buf_size = CLIENT_BUF_SIZE;
+    // printf("Client buf base addr: %lx, IPC NUMBER: %lx\n", vm_config.buf_base_addr, client_id);
     /* LAB 4 TODO END */
 
     while (retry_times) {
@@ -131,7 +130,7 @@ u64 ipc_get_msg_cap(struct ipc_msg* ipc_msg, u64 cap_slot_index)
 int ipc_set_msg_data(struct ipc_msg* ipc_msg, void* data, u64 offset, u64 len)
 {
     if ((offset + len < offset) || (offset + len > ipc_msg->data_len)) {
-        printf("%s failed due to overflow.\n", __func__);
+        printf("%s failed due to overflow. off %d, len %d, size:%d\n", __func__, offset, len, ipc_msg->data_len);
         return -1;
     }
 
