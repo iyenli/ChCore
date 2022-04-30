@@ -19,6 +19,13 @@
 
 static struct ipc_struct* fsm_ipc_struct = NULL;
 static struct list_head fs_cap_infos;
+#define MY_OFFSETOF(PodType, c) ((size_t) & (((PodType*)0)->c))
+
+int alloc_new_fd()
+{
+    static int cnt = 0;
+    return ++cnt;
+}
 
 struct fs_cap_info_node {
     int fs_cap;
@@ -98,24 +105,84 @@ int get_file_size_from_fsm(char* path)
     return ret;
 }
 
+struct fs_cap_info_node* get_fs(const char* path, char** leaf)
+{
+    int i;
+    struct ipc_msg* ipc_msg;
+    char* tmp = malloc(strlen(path) + 1);
+    tmp[0] = '\0';
+    strcat(tmp, path);
+
+    ipc_msg = ipc_create_msg(fsm_ipc_struct, sizeof(struct fs_request), 0);
+    i = FS_REQ_GET_FS_CAP;
+    ipc_set_msg_data(ipc_msg, (char*)&i, MY_OFFSETOF(struct fs_request, req), sizeof(i));
+    ipc_set_msg_data(ipc_msg, tmp, MY_OFFSETOF(struct fs_request, getfscap.pathname), strlen(tmp));
+
+    ipc_call(fsm_ipc_struct, ipc_msg);
+    u64 cap = ipc_get_msg_cap(ipc_msg, 0);
+
+    // tmp[0] = '\0';
+    // strcat(tmp, ((struct fs_request*)ipc_msg)->getfscap.pathname);
+    // info("%s, %s", path, tmp);
+    *leaf = tmp;
+
+    ipc_destroy_msg(fsm_ipc_struct, ipc_msg);
+
+    struct fs_cap_info_node* fs = get_fs_cap_info(cap);
+    return fs;
+}
+
+int open_file(char* filename, struct fs_cap_info_node* fs)
+{
+    int err, i;
+    struct ipc_msg* ipc_msg;
+    int new_fd = alloc_new_fd();
+
+open:
+    i = FS_REQ_OPEN;
+    ipc_msg = ipc_create_msg(fs->fs_ipc_struct, sizeof(struct fs_request), 0);
+    ipc_set_msg_data(ipc_msg, (char*)&i, MY_OFFSETOF(struct fs_request, req), sizeof(i));
+    ipc_set_msg_data(ipc_msg, filename, MY_OFFSETOF(struct fs_request, open.pathname), strlen(filename));
+    ipc_set_msg_data(ipc_msg, (char*)&new_fd, MY_OFFSETOF(struct fs_request, open.new_fd), sizeof(new_fd));
+    err = ipc_call(fs->fs_ipc_struct, ipc_msg);
+    ipc_destroy_msg(fs->fs_ipc_struct, ipc_msg);
+
+    if (err < 0) {
+        i = FS_REQ_CREAT;
+        ipc_msg = ipc_create_msg(fs->fs_ipc_struct, sizeof(struct fs_request), 0);
+        ipc_set_msg_data(ipc_msg, (char*)&i, MY_OFFSETOF(struct fs_request, req), sizeof(i));
+        ipc_set_msg_data(ipc_msg, filename, MY_OFFSETOF(struct fs_request, creat.pathname), strlen(filename));
+        err = ipc_call(fs->fs_ipc_struct, ipc_msg);
+        ipc_destroy_msg(fs->fs_ipc_struct, ipc_msg);
+        goto open;
+    }
+
+    return err;
+}
+
 /* Write buf into the file at `path`. */
 int fsm_write_file(const char* path, char* buf, unsigned long size)
 {
     if (!fsm_ipc_struct) {
         connect_fsm_server();
     }
-    int ret = 0;
+    int ret = 0, i = 0;
+    char* leaf;
 
     /* LAB 5 TODO BEGIN */
-    //     int i;
-    //     struct ipc_msg* ipc_msg;
+    struct ipc_msg* ipc_msg;
+    struct fs_cap_info_node* fs = get_fs(path, &leaf);
+    int fd = open_file(leaf, fs);
 
-    //     ipc_msg = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-    //     memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
+    ipc_msg = ipc_create_msg(fs->fs_ipc_struct, size + sizeof(struct fs_request), 0);
 
-    //     ipc_call(mpinfo->_fs_ipc_struct, ipc_msg);
-    //     memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg), ipc_msg_->data_len);
-    //     ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg);
+    i = FS_REQ_WRITE;
+    ipc_set_msg_data(ipc_msg, (char*)&i, MY_OFFSETOF(struct fs_request, req), sizeof(i));
+    ipc_set_msg_data(ipc_msg, (char*)&(fd), MY_OFFSETOF(struct fs_request, write.fd), sizeof(fd));
+    ipc_set_msg_data(ipc_msg, (char*)&size, MY_OFFSETOF(struct fs_request, write.count), sizeof(size));
+    memcpy(ipc_get_msg_data(ipc_msg) + sizeof(struct fs_request), buf, size);
+    ret = ipc_call(fs->fs_ipc_struct, ipc_msg);
+    ipc_destroy_msg(fs->fs_ipc_struct, ipc_msg);
     /* LAB 5 TODO END */
 
     return ret;
@@ -124,14 +191,31 @@ int fsm_write_file(const char* path, char* buf, unsigned long size)
 /* Read content from the file at `path`. */
 int fsm_read_file(const char* path, char* buf, unsigned long size)
 {
-
     if (!fsm_ipc_struct) {
         connect_fsm_server();
     }
-    int ret = 0;
+    int ret = 0, i = 0;
+    char* leaf;
 
     /* LAB 5 TODO BEGIN */
+    struct ipc_msg* ipc_msg;
+    struct fs_cap_info_node* fs = get_fs(path, &leaf);
+    int fd = open_file(leaf, fs);
 
+    ipc_msg = ipc_create_msg(fs->fs_ipc_struct, size + sizeof(struct fs_request), 0);
+
+    i = FS_REQ_READ;
+    ipc_set_msg_data(ipc_msg, (char*)&i, MY_OFFSETOF(struct fs_request, req), sizeof(i));
+    ipc_set_msg_data(ipc_msg, (char*)&(fd), MY_OFFSETOF(struct fs_request, read.fd), sizeof(fd));
+    ipc_set_msg_data(ipc_msg, (char*)&size, MY_OFFSETOF(struct fs_request, read.count), sizeof(size));
+    ret = ipc_call(fs->fs_ipc_struct, ipc_msg);
+
+    ipc_destroy_msg(fs->fs_ipc_struct, ipc_msg);
+
+    if (ret <= 0) {
+        return 0;
+    }
+    memcpy(buf, ipc_get_msg_data(ipc_msg), ret);
     /* LAB 5 TODO END */
 
     return ret;

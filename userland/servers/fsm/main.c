@@ -150,7 +150,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -161,7 +161,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -172,7 +172,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -183,7 +183,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -194,7 +194,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -203,7 +203,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -212,7 +212,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -221,7 +221,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
@@ -233,7 +233,7 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         // info("cr over");
         memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
 
-        ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
         // info("call over");
         memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);

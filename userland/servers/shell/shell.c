@@ -274,7 +274,6 @@ void print_file_content(char* path)
 
 void fs_scan(char* path)
 {
-
     /* LAB 5 TODO BEGIN */
     int new_fd = alloc_fd();
     int i, ret = 0;
