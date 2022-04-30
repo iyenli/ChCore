@@ -210,7 +210,6 @@ int fclose(FILE* f)
 /* Need to support %s and %d. */
 int fscanf(FILE* f, const char* fmt, ...)
 {
-
     /* LAB 5 TODO BEGIN */
     int err, flag, param = 0;
     size_t i = 0, j = 0, len = strlen(fmt);
@@ -220,7 +219,7 @@ int fscanf(FILE* f, const char* fmt, ...)
     char buf[MAX_PARAM_NUM + 1][MAX_ONE_SEC_LEN];
     char summary_buf[SUM_BUF];
 
-    err = fread(summary_buf, SUM_BUF - 1, 1, f);
+    err = fread(summary_buf, 1024, 1, f);
     BUG_ON(err != strlen(summary_buf));
 
     for (; i < len; ++i) {
@@ -266,9 +265,9 @@ int fscanf(FILE* f, const char* fmt, ...)
 
     for (i = 0; i < param; i++) {
         if (type[i] == 1) {
-            strcat(itoa(va_arg(valist, char*), buf[i], 10), buf[param]);
+            strcat(va_arg(valist, char*), buf[i]);
         } else {
-            *va_arg(valist, int*) = atoi(buf[param]);
+            *va_arg(valist, int*) = atoi(buf[i]);
         }
     }
     va_end(valist);
@@ -282,23 +281,26 @@ int fscanf(FILE* f, const char* fmt, ...)
 int fprintf(FILE* f, const char* fmt, ...)
 {
     /* LAB 5 TODO BEGIN */
-    int err, flag, param = 0;
+    int err, flag = 0, param = 0;
     size_t i = 0, len = strlen(fmt);
 
     /* handle fxxking string */
     char type[MAX_PARAM_NUM];
     char buf[MAX_PARAM_NUM + 1][MAX_ONE_SEC_LEN];
     char summary_buf[SUM_BUF];
+
     for (; i < len; ++i) {
         if (fmt[i] == '%') {
             BUG_ON(i == len - 1);
 
-            type[param] = (fmt[++i] == 'd') ? 1 : (fmt[++i] == 's') ? 2
-                                                                    : 0;
+            ++i;
+            type[param] = (fmt[i] == 'd') ? 1 : (fmt[i] == 's') ? 2
+                                                                : 0;
             BUG_ON(type[param] == 0);
 
             buf[param++][flag] = '\0';
             flag = 0;
+
             BUG_ON(param >= MAX_PARAM_NUM);
         } else {
             buf[param][flag++] = fmt[i];
@@ -320,7 +322,6 @@ int fprintf(FILE* f, const char* fmt, ...)
     strcat(summary_buf, buf[param]);
     va_end(valist);
     /* END */
-
     err = fwrite(summary_buf, strlen(summary_buf), 1, f);
     /* LAB 5 TODO END */
     return err;
