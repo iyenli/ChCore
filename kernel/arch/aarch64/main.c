@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
 #include <arch/machine/pmu.h>
 #include <arch/machine/smp.h>
 #include <arch/mm/page_table.h>
@@ -84,9 +96,9 @@ void main(paddr_t boot_flag)
     kinfo("[ChCore] timer init finished\n");
 
     /* Other cores are busy looping on the addr, wake up those cores */
-    lock_kernel();
+    // lock_kernel();
     enable_smp_cores(boot_flag);
-    unlock_kernel();
+    // unlock_kernel();
     kinfo("[ChCore] boot multicore finished\n");
 
 #ifdef CHCORE_KERNEL_TEST
@@ -112,20 +124,20 @@ void secondary_start(void)
 {
     u32 cpuid = smp_get_cpu_id();
 
-    arch_interrupt_init_per_cpu();
-    pmu_init();
-    timer_init();
-
     /* LAB 4 TODO BEGIN: Set the cpu_status */
     cpu_status[cpuid] = cpu_run;
     /* LAB 4 TODO END */
+
+    arch_interrupt_init_per_cpu();
+    pmu_init();
+    timer_init();
 
 #ifdef CHCORE_KERNEL_TEST
     run_test();
 #endif
 
     /* LAB 4 TODO BEGIN */
-    sched_init(&rr);
+    // sched_init(&rr);
     /* LAB 4 TODO END */
 
     /* when get into kernel, lock it */

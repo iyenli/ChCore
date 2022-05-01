@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
 /* Scheduler related functions are implemented here */
 #include <arch/machine/smp.h>
 #include <common/errno.h>
@@ -157,11 +169,12 @@ int rr_sched(void)
         current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0) {
         return 0;
     } // unlike too long line!
-    // clang-format on
 
-    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
-        kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
+    if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state != TE_EXITING
+        && current_thread->thread_ctx->state != TS_WAITING && current_thread->thread_ctx->state != TS_RUNNING) {
+        // kinfo("Exit state: %d, state: %d\n", current_thread->thread_ctx->thread_exit_state, current_thread->thread_ctx->state);
     }
+    // clang-format on
 
     if (current_thread != NULL && current_thread->thread_ctx != NULL && current_thread->thread_ctx->type != TYPE_IDLE) {
         if (current_thread->thread_ctx->thread_exit_state == TE_EXITING) {

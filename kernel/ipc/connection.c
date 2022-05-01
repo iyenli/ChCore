@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
 #include <ipc/connection.h>
 #include <irq/irq.h>
 #include <mm/kmalloc.h>
@@ -134,9 +146,9 @@ static int create_connection(struct thread* source, struct thread* target,
     /* LAB 4 TODO BEGIN */
     // kinfo("Server buf base addr: %lx, Client buf base addr: %lx\n", server_buf_base, client_buf_base);
     ret = vmspace_map_range(target->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-    ret = vmspace_map_range(target->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
+    // ret = vmspace_map_range(target->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
     ret = vmspace_map_range(source->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-    ret = vmspace_map_range(source->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
+    // ret = vmspace_map_range(source->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
     /* LAB 4 TODO END */
 
     conn->buf.client_user_addr
@@ -574,7 +586,7 @@ u64 sys_ipc_call(u32 conn_cap, struct ipc_msg* ipc_msg, u64 cap_num)
      * Then what value should the arg be?
      * */
     /* LAB 4 TODO BEGIN: set arg */
-    arg = (u64)ipc_msg;
+    arg = (u64)ipc_msg - conn->buf.client_user_addr + conn->buf.server_user_addr;
     /* LAB 4 TODO END */
 
     thread_migrate_to_server(conn, arg);
