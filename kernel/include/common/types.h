@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
 #pragma once
 
 #include <common/macro.h>
@@ -12,14 +24,9 @@ typedef int s32;
 typedef short s16;
 typedef signed char s8;
 
-#ifdef CHCORE
 #include <posix/sys/types.h>
 
 #define NULL ((void *)0)
-
-#else
-#include <stdlib.h>
-#endif
 
 typedef char bool;
 #define true (1)

@@ -5,6 +5,10 @@
 tags
 cscope.*
 *.swp
+.DS_Store
+
+.build_log
+.build_stderr
 
 !/**/firmware/*.bin
 !/**/firmware/*.elf
@@ -16,7 +20,7 @@ _install
 .vscode
 simulate.sh
 debug.sh
-.config
+.config*
 .*-config
 
 asm

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+make="${MAKE:-make}"
+
+$make distclean
+$make defconfig
+$make build
+
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'

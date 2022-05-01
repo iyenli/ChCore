@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
 #include "boot.h"
 #include "image.h"
 #include "consts.h"
@@ -23,6 +35,30 @@ volatile u64 clear_bss_flag = NOT_BSS;
 void early_uart_init(void);
 void uart_send_string(char *);
 
+static void wakeup_other_cores(void)
+{
+        u64 *addr;
+
+        /*
+         * Set the entry address for non-primary cores.
+         * 0xe0, 0xe8, 0xf0 are fixed in the firmware (armstub8.bin).
+         */
+        // addr = (u64 *)0xd8;
+        // *addr = TEXT_OFFSET;
+        addr = (u64 *)0xe0;
+        *addr = TEXT_OFFSET;
+        addr = (u64 *)0xe8;
+        *addr = TEXT_OFFSET;
+        addr = (u64 *)0xf0;
+        *addr = TEXT_OFFSET;
+
+        /*
+         * Instruction sev (set event) for waking up other (non-primary) cores
+         * that executes wfe instruction.
+         */
+        asm volatile("sev");
+}
+
 static void clear_bss(void)
 {
         u64 bss_start_addr;
@@ -47,6 +83,8 @@ void init_c(void)
         early_uart_init();
         uart_send_string("boot: init_c\r\n");
 
+        wakeup_other_cores();
+
         /* Initialize Boot Page Table. */
         uart_send_string("[BOOT] Install boot page table\r\n");
         init_boot_pt();
@@ -60,4 +98,10 @@ void init_c(void)
         start_kernel(secondary_boot_flag);
 
         /* Never reach here */
+}
+
+void secondary_init_c(int cpuid)
+{
+        el1_mmu_activate();
+        secondary_cpu_boot(cpuid);
 }
