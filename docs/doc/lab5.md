@@ -20,5 +20,5 @@ arg = (u64)ipc_msg - conn->buf.client_user_addr + conn->buf.server_user_addr;
 
 ## 3 VFS	
 
-
+解决了Lab 4残留的Bug. 发现在Secondary Start中多次`init_sched`. 导致多次调用`rr_sched_init`.  但是本身`sched_init`就为每个核准备好了一个IDLE线程并且加入了idle_cap_group的thread list. 导致可能会在进行Lab 4的测试时，有几率出现内存错误。
 
