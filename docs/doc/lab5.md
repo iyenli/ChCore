@@ -24,9 +24,7 @@ arg = (u64)ipc_msg - conn->buf.client_user_addr + conn->buf.server_user_addr;
 
 解决了Lab 4残留的Bug. 发现在Secondary Start中多次`init_sched`. 导致多次调用`rr_sched_init`.  但是本身`sched_init`就为每个核准备好了一个IDLE线程并且加入了idle_cap_group的thread list. 导致可能会在进行Lab 4的测试时，有几率出现内存错误。
 
-然后我们需要支持所有tmpfs支持的操作，基于操作类型+指明文件方式选择Switch case. 要注意Open时应当将注册的Client核对应的badget和fd绑定，以便下次直接使用Client和FS通信。
-
-随后重构了代码，抽离出`sent ipc by name/fd`两个函数。注意`ipc_call`返回值。由于ls等命令依靠这个返回值指示返回长度，应当把`ret`置为`ipc_call`的返回值。
+然后我们需要支持所有tmpfs支持的操作，基于操作类型+指明文件方式选择Switch case. 要注意Open时应当将注册的Client核对应的badget和fd绑定。然后重构了代码，抽离出`sent ipc by name/fd`两个函数。注意`ipc_call`返回值。由于ls等命令依靠这个返回值指示返回长度，应当把`ret`置为`ipc_call`的返回值。
 
 在完成上面三个部分后，连续测试30次均能拿到所有分数。
 

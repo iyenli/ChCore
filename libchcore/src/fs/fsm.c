@@ -19,6 +19,8 @@
 
 static struct ipc_struct* fsm_ipc_struct = NULL;
 static struct list_head fs_cap_infos;
+
+/* Helper function */
 #define MY_OFFSETOF(PodType, c) ((size_t) & (((PodType*)0)->c))
 
 int alloc_new_fd()
@@ -26,6 +28,7 @@ int alloc_new_fd()
     static int cnt = 0;
     return ++cnt;
 }
+/* Helper function */
 
 struct fs_cap_info_node {
     int fs_cap;
@@ -109,6 +112,8 @@ struct fs_cap_info_node* get_fs(const char* path, char** leaf)
 {
     int i;
     struct ipc_msg* ipc_msg;
+
+    // const char* can't serve as param
     char* tmp = malloc(strlen(path) + 1);
     tmp[0] = '\0';
     strcat(tmp, path);
@@ -120,18 +125,13 @@ struct fs_cap_info_node* get_fs(const char* path, char** leaf)
 
     ipc_call(fsm_ipc_struct, ipc_msg);
     u64 cap = ipc_get_msg_cap(ipc_msg, 0);
-
-    // tmp[0] = '\0';
-    // strcat(tmp, ((struct fs_request*)ipc_msg)->getfscap.pathname);
-    // info("%s, %s", path, tmp);
     *leaf = tmp;
 
     ipc_destroy_msg(fsm_ipc_struct, ipc_msg);
-
-    struct fs_cap_info_node* fs = get_fs_cap_info(cap);
-    return fs;
+    return get_fs_cap_info(cap);
 }
 
+// Just copy... so tired now
 int open_file(char* filename, struct fs_cap_info_node* fs)
 {
     int err, i;
@@ -170,6 +170,7 @@ int fsm_write_file(const char* path, char* buf, unsigned long size)
     char* leaf;
 
     /* LAB 5 TODO BEGIN */
+    // Copy...
     struct ipc_msg* ipc_msg;
     struct fs_cap_info_node* fs = get_fs(path, &leaf);
     int fd = open_file(leaf, fs);
@@ -209,7 +210,6 @@ int fsm_read_file(const char* path, char* buf, unsigned long size)
     ipc_set_msg_data(ipc_msg, (char*)&(fd), MY_OFFSETOF(struct fs_request, read.fd), sizeof(fd));
     ipc_set_msg_data(ipc_msg, (char*)&size, MY_OFFSETOF(struct fs_request, read.count), sizeof(size));
     ret = ipc_call(fs->fs_ipc_struct, ipc_msg);
-
     ipc_destroy_msg(fs->fs_ipc_struct, ipc_msg);
 
     if (ret <= 0) {
