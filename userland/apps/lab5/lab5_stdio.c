@@ -27,7 +27,7 @@ int alloc_fd()
 
 #define MAX_PARAM_NUM 5
 #define MAX_ONE_SEC_LEN 128
-#define SUM_BUF 4096
+#define SUM_BUF 1024
 
 /* A utility function to reverse a string  */
 void reverse(char str[], int length)
@@ -127,6 +127,7 @@ open:
 
     res->fd = new_fd;
     res->ptr = 0;
+    // unused yet
     for (i = 0; i < strlen(mode); i++) {
         if (mode[i] == 'r') {
             res->access[0] = 1;
@@ -219,7 +220,7 @@ int fscanf(FILE* f, const char* fmt, ...)
     char buf[MAX_PARAM_NUM + 1][MAX_ONE_SEC_LEN];
     char summary_buf[SUM_BUF];
 
-    err = fread(summary_buf, 1024, 1, f);
+    err = fread(summary_buf, SUM_BUF, 1, f);
     BUG_ON(err != strlen(summary_buf));
 
     for (; i < len; ++i) {
@@ -250,8 +251,12 @@ int fscanf(FILE* f, const char* fmt, ...)
             } else {
                 BUG("Not supported type\n");
             }
+
+            // unsupported param num
             BUG_ON(param >= MAX_PARAM_NUM);
         } else {
+
+            // just check matching
             if (summary_buf[j] != fmt[i]) {
                 WARN("Not matched in fscanf.\n");
                 return -1;

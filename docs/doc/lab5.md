@@ -1,6 +1,8 @@
 # Lab 5
 
-## 1 FS
+- `lyy0627@sjtu.edu.cn, 李逸岩, 519021911103`
+
+## 1 tmpFS
 
 最主要处理的Bug 是一个局部变量的指针使用。在分配node的时候未使用给定的Helper `new_dent`, 导致`tfs_creat`之后会出现仍然找不到文件的情况。
 
@@ -21,4 +23,12 @@ arg = (u64)ipc_msg - conn->buf.client_user_addr + conn->buf.server_user_addr;
 ## 3 VFS	
 
 解决了Lab 4残留的Bug. 发现在Secondary Start中多次`init_sched`. 导致多次调用`rr_sched_init`.  但是本身`sched_init`就为每个核准备好了一个IDLE线程并且加入了idle_cap_group的thread list. 导致可能会在进行Lab 4的测试时，有几率出现内存错误。
+
+然后我们需要支持所有tmpfs支持的操作，基于操作类型+指明文件方式选择Switch case. 要注意Open时应当将注册的Client核对应的badget和fd绑定，以便下次直接使用Client和FS通信。
+
+随后重构了代码，抽离出`sent ipc by name/fd`两个函数。注意`ipc_call`返回值。由于ls等命令依靠这个返回值指示返回长度，应当把`ret`置为`ipc_call`的返回值。
+
+在完成上面三个部分后，连续测试30次均能拿到所有分数。
+
+<img src="C:/Users/11796/AppData/Roaming/Typora/typora-user-images/image-20220501101428863.png" alt="image-20220501101428863" style="zoom:67%;" />
 

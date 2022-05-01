@@ -84,6 +84,7 @@ int send_ipc_by_name(char* name, struct fs_request* fr, struct ipc_msg* ipc_msg,
     struct ipc_msg* ipc_msg_;
 
     mpinfo = get_mount_point(name, strlen(name));
+    BUG_ON(mpinfo == NULL);
     strip_path(mpinfo, name);
 
     ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
@@ -93,6 +94,23 @@ int send_ipc_by_name(char* name, struct fs_request* fr, struct ipc_msg* ipc_msg,
     memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
 
     ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+    return res;
+}
+
+int send_ipc_by_fd(int fd, struct fs_request* fr, struct ipc_msg* ipc_msg, u64 client_badge)
+{
+    struct mount_point_info_node* mpinfo = NULL;
+    struct ipc_msg* ipc_msg_;
+
+    mpinfo = fsm_get_mount_info_withfd(client_badge, fd);
+    BUG_ON(mpinfo == NULL);
+    ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
+    memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
+
+    int res = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
+    memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
+    ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+
     return res;
 }
 /* LAB 5 TODO END */
@@ -143,102 +161,32 @@ void fsm_server_dispatch(struct ipc_msg* ipc_msg, u64 client_badge)
         ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
         break;
     case FS_REQ_CREAT:
-        // send_ipc_by_name(fr->creat.pathname, fr, ipc_msg, client_badge);
-        mpinfo = get_mount_point(fr->creat.pathname, strlen(fr->creat.pathname));
-        strip_path(mpinfo, fr->creat.pathname);
-
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_name(fr->creat.pathname, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_UNLINK:
-        mpinfo = get_mount_point(fr->unlink.pathname, strlen(fr->unlink.pathname));
-        strip_path(mpinfo, fr->unlink.pathname);
-
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_name(fr->unlink.pathname, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_MKDIR:
-        mpinfo = get_mount_point(fr->mkdir.pathname, strlen(fr->mkdir.pathname));
-        strip_path(mpinfo, fr->mkdir.pathname);
-
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_name(fr->mkdir.pathname, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_RMDIR:
-        mpinfo = get_mount_point(fr->rmdir.pathname, strlen(fr->rmdir.pathname));
-        strip_path(mpinfo, fr->rmdir.pathname);
-
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_name(fr->rmdir.pathname, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_GET_SIZE:
-        mpinfo = get_mount_point(fr->getsize.pathname, strlen(fr->getsize.pathname));
-        strip_path(mpinfo, fr->getsize.pathname);
-
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_name(fr->getsize.pathname, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_READ:
-        mpinfo = fsm_get_mount_info_withfd(client_badge, fr->read.fd);
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_fd(fr->read.fd, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_WRITE:
-        mpinfo = fsm_get_mount_info_withfd(client_badge, fr->write.fd);
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_fd(fr->write.fd, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_CLOSE:
-        mpinfo = fsm_get_mount_info_withfd(client_badge, fr->close.fd);
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_fd(fr->close.fd, fr, ipc_msg, client_badge);
         break;
     case FS_REQ_GETDENTS64:
-        mpinfo = fsm_get_mount_info_withfd(client_badge, fr->getdents64.fd);
-
-        BUG_ON(mpinfo == NULL);
-        ipc_msg_ = ipc_create_msg((mpinfo->_fs_ipc_struct), sizeof(struct fs_request), 0);
-        // info("cr over");
-        memcpy(ipc_get_msg_data(ipc_msg_), ipc_get_msg_data(ipc_msg), ipc_msg->data_len);
-
-        ret = ipc_call(mpinfo->_fs_ipc_struct, ipc_msg_);
-        // info("call over");
-        memcpy(ipc_get_msg_data(ipc_msg), ipc_get_msg_data(ipc_msg_), ipc_msg_->data_len);
-        ipc_destroy_msg(mpinfo->_fs_ipc_struct, ipc_msg_);
+        ret = send_ipc_by_fd(fr->getdents64.fd, fr, ipc_msg, client_badge);
         break;
-
         /* LAB 5 TODO END */
 
     default:
